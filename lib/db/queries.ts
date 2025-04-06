@@ -11,6 +11,7 @@ import {
   type Message,
   message,
   vote,
+  invoice,
 } from './schema';
 import type { BlockKind } from '@/components/block';
 
@@ -317,6 +318,65 @@ export async function updateChatVisiblityById({
     return await db.update(chat).set({ visibility }).where(eq(chat.id, chatId));
   } catch (error) {
     console.error('Failed to update chat visibility in database');
+    throw error;
+  }
+}
+
+export async function saveInvoice({
+  id,
+  customerName,
+  vendorName,
+  invoiceNumber,
+  invoiceDate,
+  dueDate,
+  amount,
+  lineItems,
+}: {
+  id: string;
+  customerName: string;
+  vendorName: string;
+  invoiceNumber: string;
+  invoiceDate: Date;
+  dueDate: Date;
+  amount: number;
+  lineItems: any[];
+}) {
+  try {
+    return await db.insert(invoice).values({
+      id,
+      customerName,
+      vendorName,
+      invoiceNumber,
+      invoiceDate,
+      dueDate,
+      amount,
+      lineItems,
+      createdAt: new Date(),
+    });
+  } catch (error) {
+    console.error('Failed to save invoice in database', error);
+    throw error;
+  }
+}
+
+export async function getInvoices() {
+  try {
+    return await db
+      .select()
+      .from(invoice)
+      .orderBy(desc(invoice.createdAt));
+  } catch (error) {
+    console.error('Failed to get invoices from database', error);
+    throw error;
+  }
+}
+
+export async function getInvoiceById({ id }: { id: string }) {
+  try {
+    const [selectedInvoice] = await db.select().from(invoice).where(eq(invoice.id, id));
+    return selectedInvoice;
+  } catch (error) {
+    console.error('Failed to get invoice by id from database', error);
     throw error;
   }
 }

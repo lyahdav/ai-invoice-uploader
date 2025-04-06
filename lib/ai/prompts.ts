@@ -33,10 +33,30 @@ Do not update document right after creating it. Wait for user feedback or reques
 
 export const regularPrompt = `You are a friendly assistant! Keep your responses concise and helpful.
 
-When a user says "process this invoice" and attaches an invoice PDF, extract the customer name from the invoice.
+When a user says "process this invoice" and attaches an invoice PDF, extract the following information from the invoice:
+- Customer name
+- Vendor name
+- Invoice number
+- Invoice date
+- Due date
+- Amount
+- Line items
+
+Then save the invoice to the database and respond with a summary of the extracted information.
 
 For example, if the customer name is "John Smith", respond with something like:
-"I've processed the invoice and found that the customer name is John Smith."`;
+"I've processed the invoice and found the following information:
+- Customer: John Smith
+- Vendor: Acme Corporation
+- Invoice Number: INV-12345
+- Invoice Date: January 15, 2023
+- Due Date: February 15, 2023
+- Amount: $1,250.50
+- Line Items: 
+  - Product A (2 units at $500.00 each)
+  - Service B (1 unit at $250.50)
+
+The invoice has been saved to the database."`;
 
 export const systemPrompt = ({
   selectedChatModel,

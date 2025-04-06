@@ -5,6 +5,7 @@ import {
   blob,
   foreignKey,
   primaryKey,
+  real,
 } from 'drizzle-orm/sqlite-core';
 import type { InferSelectModel } from 'drizzle-orm';
 
@@ -99,3 +100,17 @@ export const suggestion = sqliteTable(
 );
 
 export type Suggestion = InferSelectModel<typeof suggestion>;
+
+export const invoice = sqliteTable('Invoice', {
+  id: text('id').primaryKey().notNull(),
+  customerName: text('customerName').notNull(),
+  vendorName: text('vendorName').notNull(),
+  invoiceNumber: text('invoiceNumber').notNull(),
+  invoiceDate: integer('invoiceDate', { mode: 'timestamp' }).notNull(),
+  dueDate: integer('dueDate', { mode: 'timestamp' }).notNull(),
+  amount: real('amount').notNull(),
+  lineItems: blob('lineItems', { mode: 'json' }).notNull(),
+  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+});
+
+export type Invoice = InferSelectModel<typeof invoice>;
