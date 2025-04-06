@@ -24,6 +24,15 @@ export const PreviewAttachment = ({
               alt={name ?? 'An image attachment'}
               className="rounded-md size-full object-cover"
             />
+          ) : contentType.startsWith('application/pdf') ? (
+            <iframe
+              key={url}
+              src={url}
+              width="500"
+              height="600"
+              className="rounded-md size-full"
+              title={name ?? 'PDF attachment'}
+            />
           ) : (
             <div className="" />
           )

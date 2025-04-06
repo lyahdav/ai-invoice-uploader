@@ -27,6 +27,7 @@ import { ArrowUpIcon, PaperclipIcon, StopIcon } from './icons';
 import { PreviewAttachment } from './preview-attachment';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
+import { SuggestedActions } from './suggested-actions';
 import equal from 'fast-deep-equal';
 
 function PureMultimodalInput({
@@ -87,17 +88,16 @@ function PureMultimodalInput({
     }
   };
 
-  const defaultInput = 'Process this invoice';
   const [localStorageInput, setLocalStorageInput] = useLocalStorage(
     'input',
-    defaultInput,
+    '',
   );
 
   useEffect(() => {
     if (textareaRef.current) {
       const domValue = textareaRef.current.value;
       // Prefer DOM value over localStorage to handle hydration
-      const finalValue = domValue || localStorageInput || defaultInput;
+      const finalValue = domValue || localStorageInput;
       setInput(finalValue);
       adjustHeight();
     }
@@ -202,6 +202,12 @@ function PureMultimodalInput({
 
   return (
     <div className="relative w-full flex flex-col gap-4">
+      {messages.length === 0 &&
+        attachments.length === 0 &&
+        uploadQueue.length === 0 && (
+          <SuggestedActions setInput={setInput} chatId={chatId} />
+        )}
+
       <input
         type="file"
         className="fixed -top-4 -left-4 size-0.5 opacity-0 pointer-events-none"
