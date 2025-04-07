@@ -6,11 +6,17 @@ import { type Invoice } from '@/lib/db/schema';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchInvoices } from '@/app/actions';
+import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
+
+type SortColumn = 'invoiceDate' | 'dueDate' | 'amount' | 'vendorName' | null;
+type SortDirection = 'asc' | 'desc';
 
 export default function ProcessedInvoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortColumn, setSortColumn] = useState<SortColumn>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   useEffect(() => {
     const loadInvoices = async () => {
@@ -31,6 +37,43 @@ export default function ProcessedInvoices() {
 
     loadInvoices();
   }, []);
+
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      // Toggle direction if clicking the same column
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new column and default to ascending
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortedInvoices = () => {
+    if (!sortColumn) return invoices;
+    
+    return [...invoices].sort((a, b) => {
+      let aValue = a[sortColumn];
+      let bValue = b[sortColumn];
+      
+      // Handle date fields
+      if (sortColumn === 'invoiceDate' || sortColumn === 'dueDate') {
+        aValue = new Date(aValue).getTime();
+        bValue = new Date(bValue).getTime();
+      }
+      
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const getSortIcon = (column: SortColumn) => {
+    if (sortColumn !== column) return <ChevronsUpDown className="h-4 w-4 inline ml-1 opacity-50" />;
+    return sortDirection === 'asc' 
+      ? <ChevronUp className="h-4 w-4 inline ml-1" /> 
+      : <ChevronDown className="h-4 w-4 inline ml-1" />;
+  };
 
   if (loading) {
     return <InvoiceTableSkeleton />;
@@ -62,6 +105,8 @@ export default function ProcessedInvoices() {
     );
   }
 
+  const sortedInvoices = getSortedInvoices();
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -74,15 +119,35 @@ export default function ProcessedInvoices() {
               <tr className="border-b">
                 <th className="py-2 px-4 text-left font-medium">Invoice #</th>
                 <th className="py-2 px-4 text-left font-medium">Customer</th>
-                <th className="py-2 px-4 text-left font-medium">Vendor</th>
-                <th className="py-2 px-4 text-left font-medium">Date</th>
-                <th className="py-2 px-4 text-left font-medium">Due Date</th>
-                <th className="py-2 px-4 text-right font-medium">Amount</th>
+                <th 
+                  className="py-2 px-4 text-left font-medium cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('vendorName')}
+                >
+                  Vendor {getSortIcon('vendorName')}
+                </th>
+                <th 
+                  className="py-2 px-4 text-left font-medium cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('invoiceDate')}
+                >
+                  Date {getSortIcon('invoiceDate')}
+                </th>
+                <th 
+                  className="py-2 px-4 text-left font-medium cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('dueDate')}
+                >
+                  Due Date {getSortIcon('dueDate')}
+                </th>
+                <th 
+                  className="py-2 px-4 text-right font-medium cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('amount')}
+                >
+                  Amount {getSortIcon('amount')}
+                </th>
                 <th className="py-2 px-4 text-left font-medium">Created</th>
               </tr>
             </thead>
             <tbody>
-              {invoices.map((invoice) => (
+              {sortedInvoices.map((invoice) => (
                 <tr key={invoice.id} className="border-b hover:bg-muted/50">
                   <td className="py-2 px-4">{invoice.invoiceNumber}</td>
                   <td className="py-2 px-4">{invoice.customerName}</td>
