@@ -2,10 +2,9 @@ import { z } from 'zod';
 import { generateUUID } from '@/lib/utils';
 import { saveInvoice } from '@/lib/db/queries';
 import { Session } from 'next-auth';
-import { tool, generateObject } from 'ai';
+import { tool, generateObject, FilePart } from 'ai';
 import { myProvider } from '../models';
 
-// Define the schema for the extracted invoice data
 const invoiceDataSchema = z.object({
   customerName: z.string().describe('The name of the customer on the invoice'),
   vendorName: z.string().describe('The name of the vendor/supplier on the invoice'),
@@ -21,14 +20,10 @@ const invoiceDataSchema = z.object({
   })).describe('The line items on the invoice')
 });
 
-const processInvoiceSchema = z.object({
-  // Add any parameters needed for the tool
-});
-
 export const processInvoice = ({ session }: { session: Session }) => {
   return tool({
     description: 'Process an invoice PDF and extract information',
-    parameters: processInvoiceSchema,
+    parameters: z.object({}),
     execute: async (args, { messages }) => {
       console.log('processInvoice, begin');
       
@@ -39,29 +34,42 @@ export const processInvoice = ({ session }: { session: Session }) => {
         if (!lastMessage || !lastMessage.content) {
           throw new Error('No PDF data found in the messages');
         }
-        
-        // Extract the PDF content from the message
-        const pdfContent = lastMessage.content;
+        if (!Array.isArray(lastMessage.content)) {
+          throw new Error('Last message content is not an array');
+        }
+        const lastContentItem = lastMessage.content[lastMessage.content.length - 1];
+        if (lastContentItem.type !== 'file') {
+          throw new Error('Last message content is not a file');
+        }
+        const pdfData = (lastContentItem as FilePart).data;
         
         // Use generateObject to extract structured data from the PDF
         const { object: extractedData } = await generateObject({
           model: myProvider.languageModel('chat-model-large'),
           schema: invoiceDataSchema,
-          prompt: `Extract the following information from this invoice PDF:
-          
-          - Customer name
-          - Vendor/supplier name
-          - Invoice number
-          - Invoice date
-          - Due date
-          - Total amount
-          - Line items (description, quantity, unit price, total)
-          
-          Here is the invoice content in base64 PDF format:
-          
-          ${pdfContent}
-          
-          Extract the information and return it in a structured format.`
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `Extract the following information from this invoice PDF:
+
+                  - Customer name
+                  - Vendor name
+                  - Invoice number
+                  - Invoice date
+                  - Due date
+                  - Total amount
+                  - Line items`
+                },
+                {
+                  type: 'file',
+                  data: pdfData,
+                  mimeType: 'application/pdf',
+                }
+              ]
+            }]
         });
         
         console.log('processInvoice, extractedData: ', extractedData);
