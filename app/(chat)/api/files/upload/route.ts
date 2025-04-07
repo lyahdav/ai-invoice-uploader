@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/app/(auth)/auth';
+import { generateObject } from 'ai';
+import { myProvider } from '@/lib/ai/models';
 
 // Use Blob instead of File since File is not available in Node.js environment
 const FileSchema = z.object({
@@ -12,6 +14,14 @@ const FileSchema = z.object({
     .refine((file) => ['application/pdf'].includes(file.type), {
       message: 'File type should be PDF',
     }),
+});
+
+// Schema for invoice validation
+const InvoiceValidationSchema = z.object({
+  isInvoice: z.boolean().describe('Whether the document is an invoice'),
+  documentType: z.string().describe('The type of document (invoice, receipt, statement, etc.)'),
+  confidence: z.number().describe('Confidence score of the classification (0-1)'),
+  explanation: z.string().describe('Brief explanation of why this is or is not an invoice'),
 });
 
 export async function POST(request: Request) {
@@ -49,6 +59,47 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(fileBuffer);
 
     try {
+      // Validate if the document is an invoice using AI
+      const { object: validationResult } = await generateObject({
+        model: myProvider.languageModel('chat-model-large'),
+        schema: InvoiceValidationSchema,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Analyze this document and determine if it's an invoice. 
+                An invoice typically contains:
+                - A clear indication it's an invoice (title, header, etc.)
+                - Invoice number
+                - Date issued
+                - Due date
+                - Line items with descriptions and prices
+                - Total amount
+                - Vendor/supplier information
+                - Customer/billing information
+                
+                Receipts, account statements, and other financial documents are NOT invoices.
+                Provide a confidence score and explanation for your classification.`
+              },
+              {
+                type: 'file',
+                data: fileBuffer,
+                mimeType: 'application/pdf',
+              }
+            ]
+          }
+        ]
+      });
+
+      // If the document is not an invoice, reject it
+      if (!validationResult.isInvoice) {
+        return NextResponse.json({ 
+          error: `Upload rejected: This appears to be a ${validationResult.documentType}, not an invoice. ${validationResult.explanation}` 
+        }, { status: 400 });
+      }
+
       // Generate unique filename with timestamp
       const timestamp = Date.now();
       const uniqueFilename = `${timestamp}-${filename}`;
