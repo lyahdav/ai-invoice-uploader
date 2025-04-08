@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import {
-  type Message,
   createDataStreamResponse,
   smoothStream,
   streamText,
@@ -119,7 +118,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error processing request:', error);
     return NextResponse.json({ 
-      error: 'An error occurred: ' + (error instanceof Error ? error.message : String(error))
+      error: `An error occurred: ${error instanceof Error ? error.message : String(error)}`
     }, { status: 500 });
   }
 }
