@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { generateUUID } from '@/lib/utils';
 import { saveInvoice } from '@/lib/db/queries';
-import { Session } from 'next-auth';
-import { tool, generateObject, FilePart } from 'ai';
+import type { Session } from 'next-auth';
+import { tool, generateObject, type FilePart } from 'ai';
 import { myProvider } from '../models';
 
 const invoiceDataSchema = z.object({
