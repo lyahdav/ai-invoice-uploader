@@ -162,12 +162,6 @@ export default function ProcessedInvoices() {
         invoiceDate: (updatedInvoice.invoiceDate as Date).toISOString(),
         dueDate: (updatedInvoice.dueDate as Date).toISOString(),
         amount: updatedInvoice.amount,
-        lineItems: updatedInvoice.lineItems as {
-          description: string;
-          quantity: number;
-          unitPrice: number;
-          total: number;
-        }[],
       });
 
       if (result.success) {
@@ -270,7 +264,9 @@ export default function ProcessedInvoices() {
                     Amount {getSortIcon('amount')}
                   </div>
                 </th>
-                <th className="py-2 px-4 text-left font-medium">Uploaded Date</th>
+                <th className="py-2 px-4 text-left font-medium">
+                  Uploaded Date
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -396,7 +392,10 @@ export default function ProcessedInvoices() {
                       <div className="flex items-center gap-1">
                         <Input
                           type="date"
-                          value={format(editingInvoice.value as Date, 'yyyy-MM-dd')}
+                          value={format(
+                            editingInvoice.value as Date,
+                            'yyyy-MM-dd',
+                          )}
                           onChange={handleInputChange}
                           className="h-8 w-full"
                         />
@@ -435,7 +434,10 @@ export default function ProcessedInvoices() {
                       <div className="flex items-center gap-1">
                         <Input
                           type="date"
-                          value={format(editingInvoice.value as Date, 'yyyy-MM-dd')}
+                          value={format(
+                            editingInvoice.value as Date,
+                            'yyyy-MM-dd',
+                          )}
                           onChange={handleInputChange}
                           className="h-8 w-full"
                         />
@@ -535,10 +537,14 @@ function InvoiceTableSkeleton() {
                 <th className="py-2 px-4 text-left font-medium">Invoice #</th>
                 <th className="py-2 px-4 text-left font-medium">Customer</th>
                 <th className="py-2 px-4 text-left font-medium">Vendor</th>
-                <th className="py-2 px-4 text-left font-medium">Invoice Date</th>
+                <th className="py-2 px-4 text-left font-medium">
+                  Invoice Date
+                </th>
                 <th className="py-2 px-4 text-left font-medium">Due Date</th>
                 <th className="py-2 px-4 text-right font-medium">Amount</th>
-                <th className="py-2 px-4 text-left font-medium">Uploaded Date</th>
+                <th className="py-2 px-4 text-left font-medium">
+                  Uploaded Date
+                </th>
               </tr>
             </thead>
             <tbody>

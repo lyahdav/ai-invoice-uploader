@@ -6,6 +6,5 @@ CREATE TABLE `Invoice` (
   `invoiceDate` integer NOT NULL,
   `dueDate` integer NOT NULL,
   `amount` real NOT NULL,
-  `lineItems` blob NOT NULL,
   `createdAt` integer NOT NULL
 ); 

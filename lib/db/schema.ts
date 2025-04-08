@@ -109,8 +109,29 @@ export const invoice = sqliteTable('Invoice', {
   invoiceDate: integer('invoiceDate', { mode: 'timestamp' }).notNull(),
   dueDate: integer('dueDate', { mode: 'timestamp' }).notNull(),
   amount: real('amount').notNull(),
-  lineItems: blob('lineItems', { mode: 'json' }).notNull(),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
 });
 
 export type Invoice = InferSelectModel<typeof invoice>;
+
+export const lineItem = sqliteTable(
+  'LineItem',
+  {
+    id: text('id').primaryKey().notNull(),
+    invoiceId: text('invoiceId').notNull(),
+    description: text('description').notNull(),
+    quantity: real('quantity').notNull(),
+    unitPrice: real('unitPrice').notNull(),
+    total: real('total').notNull(),
+  },
+  (table) => {
+    return {
+      invoiceRef: foreignKey(() => ({
+        columns: [table.invoiceId],
+        foreignColumns: [invoice.id],
+      })),
+    };
+  },
+);
+
+export type LineItem = InferSelectModel<typeof lineItem>;

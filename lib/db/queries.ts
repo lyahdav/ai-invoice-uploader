@@ -12,6 +12,7 @@ import {
   message,
   vote,
   invoice,
+  lineItem,
 } from './schema';
 import type { BlockKind } from '@/components/block';
 
@@ -19,7 +20,6 @@ import type { BlockKind } from '@/components/block';
 // use the Drizzle adapter for Auth.js / NextAuth
 // https://authjs.dev/reference/adapter/drizzle
 
-// biome-ignore lint: Forbidden non-null assertion.
 const sqlite = new Database('sqlite.db');
 const db = drizzle(sqlite);
 
@@ -330,7 +330,6 @@ export async function saveInvoice({
   invoiceDate,
   dueDate,
   amount,
-  lineItems,
 }: {
   id: string;
   customerName: string;
@@ -339,10 +338,10 @@ export async function saveInvoice({
   invoiceDate: Date;
   dueDate: Date;
   amount: number;
-  lineItems: any[];
 }) {
   try {
-    return await db.insert(invoice).values({
+    // First, save the invoice
+    await db.insert(invoice).values({
       id,
       customerName,
       vendorName,
@@ -350,9 +349,10 @@ export async function saveInvoice({
       invoiceDate,
       dueDate,
       amount,
-      lineItems,
       createdAt: new Date(),
     });
+
+    return { success: true };
   } catch (error) {
     console.error('Failed to save invoice in database', error);
     throw error;
@@ -361,7 +361,13 @@ export async function saveInvoice({
 
 export async function getInvoices() {
   try {
-    return await db.select().from(invoice).orderBy(desc(invoice.createdAt));
+    const invoices = await db
+      .select()
+      .from(invoice)
+      .orderBy(desc(invoice.createdAt));
+
+    // For each invoice, get its line items
+    return invoices;
   } catch (error) {
     console.error('Failed to get invoices from database', error);
     throw error;
@@ -374,6 +380,14 @@ export async function getInvoiceById({ id }: { id: string }) {
       .select()
       .from(invoice)
       .where(eq(invoice.id, id));
+
+    if (!selectedInvoice) {
+      return null;
+    }
+
+    // Get line items for this invoice
+    const lineItems = await getLineItemsByInvoiceId({ id });
+
     return selectedInvoice;
   } catch (error) {
     console.error('Failed to get invoice by id from database', error);
@@ -389,7 +403,6 @@ export async function updateInvoice({
   invoiceDate,
   dueDate,
   amount,
-  lineItems,
 }: {
   id: string;
   customerName: string;
@@ -398,10 +411,10 @@ export async function updateInvoice({
   invoiceDate: Date;
   dueDate: Date;
   amount: number;
-  lineItems: any[];
 }) {
   try {
-    return await db
+    // Update the invoice
+    await db
       .update(invoice)
       .set({
         customerName,
@@ -410,11 +423,28 @@ export async function updateInvoice({
         invoiceDate,
         dueDate,
         amount,
-        lineItems,
       })
       .where(eq(invoice.id, id));
+
+    return { success: true };
   } catch (error) {
     console.error('Failed to update invoice in database', error);
+    throw error;
+  }
+}
+
+export async function getLineItemsByInvoiceId({ id }: { id: string }) {
+  try {
+    return await db
+      .select()
+      .from(lineItem)
+      .where(eq(lineItem.invoiceId, id))
+      .orderBy(asc(lineItem.id));
+  } catch (error) {
+    console.error(
+      'Failed to get line items by invoice id from database',
+      error,
+    );
     throw error;
   }
 }

@@ -20,7 +20,6 @@ export async function updateInvoiceAction({
   invoiceDate,
   dueDate,
   amount,
-  lineItems,
 }: {
   id: string;
   customerName: string;
@@ -29,12 +28,6 @@ export async function updateInvoiceAction({
   invoiceDate: string;
   dueDate: string;
   amount: number;
-  lineItems: Array<{
-    description: string;
-    quantity: number;
-    unitPrice: number;
-    total: number;
-  }>;
 }) {
   try {
     await updateInvoice({
@@ -45,7 +38,6 @@ export async function updateInvoiceAction({
       invoiceDate: new Date(invoiceDate),
       dueDate: new Date(dueDate),
       amount,
-      lineItems,
     });
     return { success: true };
   } catch (error) {

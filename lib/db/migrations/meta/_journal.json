@@ -13,7 +13,14 @@
       "idx": 1,
       "version": "6",
       "when": 1743985769906,
-      "tag": "0001_left_texas_twister",
+      "tag": "0001_add_invoice_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1744082507997,
+      "tag": "0002_pink_multiple_man",
       "breakpoints": true
     }
   ]
