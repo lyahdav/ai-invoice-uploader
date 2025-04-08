@@ -249,7 +249,7 @@ export default function ProcessedInvoices() {
                     onClick={() => handleSort('invoiceDate')}
                     role="button"
                   >
-                    Date {getSortIcon('invoiceDate')}
+                    Invoice Date {getSortIcon('invoiceDate')}
                   </div>
                 </th>
                 <th className="py-2 px-4 text-left font-medium">
@@ -270,7 +270,7 @@ export default function ProcessedInvoices() {
                     Amount {getSortIcon('amount')}
                   </div>
                 </th>
-                <th className="py-2 px-4 text-left font-medium">Created</th>
+                <th className="py-2 px-4 text-left font-medium">Uploaded Date</th>
               </tr>
             </thead>
             <tbody>
@@ -535,10 +535,10 @@ function InvoiceTableSkeleton() {
                 <th className="py-2 px-4 text-left font-medium">Invoice #</th>
                 <th className="py-2 px-4 text-left font-medium">Customer</th>
                 <th className="py-2 px-4 text-left font-medium">Vendor</th>
-                <th className="py-2 px-4 text-left font-medium">Date</th>
+                <th className="py-2 px-4 text-left font-medium">Invoice Date</th>
                 <th className="py-2 px-4 text-left font-medium">Due Date</th>
                 <th className="py-2 px-4 text-right font-medium">Amount</th>
-                <th className="py-2 px-4 text-left font-medium">Created</th>
+                <th className="py-2 px-4 text-left font-medium">Uploaded Date</th>
               </tr>
             </thead>
             <tbody>
