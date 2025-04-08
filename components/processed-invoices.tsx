@@ -435,7 +435,7 @@ export default function ProcessedInvoices() {
                       <div className="flex items-center gap-1">
                         <Input
                           type="date"
-                          value={editingInvoice.value as string}
+                          value={format(editingInvoice.value as Date, 'yyyy-MM-dd')}
                           onChange={handleInputChange}
                           className="h-8 w-full"
                         />
