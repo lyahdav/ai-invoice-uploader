@@ -1,31 +1,28 @@
 import { useEffect, useRef, type RefObject } from 'react';
 
-export function useScrollToBottom<T extends HTMLElement>(): [
-  RefObject<T>,
-  RefObject<T>,
-] {
-  const containerRef = useRef<T>(null);
+/**
+ * Custom hook that automatically scrolls to the bottom of a container
+ * when the number of messages changes.
+ *
+ * @param messagesLength - The number of messages in the container
+ * @returns A ref object that should be attached to the last element in the container
+ *
+ * Usage:
+ * 1. Create a ref: const endRef = useScrollToBottom<HTMLDivElement>(messages.length);
+ * 2. Attach the ref to the last element in your container
+ */
+export function useScrollToBottom<T extends HTMLElement>(
+  messagesLength: number,
+): RefObject<T> {
   const endRef = useRef<T>(null);
 
   useEffect(() => {
-    const container = containerRef.current;
     const end = endRef.current;
 
-    if (container && end) {
-      const observer = new MutationObserver(() => {
-        end.scrollIntoView({ behavior: 'instant', block: 'end' });
-      });
-
-      observer.observe(container, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        characterData: true,
-      });
-
-      return () => observer.disconnect();
+    if (end) {
+      end.scrollIntoView({ behavior: 'instant', block: 'end' });
     }
-  }, []);
+  }, [messagesLength]);
 
-  return [containerRef, endRef];
+  return endRef;
 }
