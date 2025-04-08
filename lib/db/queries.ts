@@ -361,10 +361,7 @@ export async function saveInvoice({
 
 export async function getInvoices() {
   try {
-    return await db
-      .select()
-      .from(invoice)
-      .orderBy(desc(invoice.createdAt));
+    return await db.select().from(invoice).orderBy(desc(invoice.createdAt));
   } catch (error) {
     console.error('Failed to get invoices from database', error);
     throw error;
@@ -373,10 +370,51 @@ export async function getInvoices() {
 
 export async function getInvoiceById({ id }: { id: string }) {
   try {
-    const [selectedInvoice] = await db.select().from(invoice).where(eq(invoice.id, id));
+    const [selectedInvoice] = await db
+      .select()
+      .from(invoice)
+      .where(eq(invoice.id, id));
     return selectedInvoice;
   } catch (error) {
     console.error('Failed to get invoice by id from database', error);
+    throw error;
+  }
+}
+
+export async function updateInvoice({
+  id,
+  customerName,
+  vendorName,
+  invoiceNumber,
+  invoiceDate,
+  dueDate,
+  amount,
+  lineItems,
+}: {
+  id: string;
+  customerName: string;
+  vendorName: string;
+  invoiceNumber: string;
+  invoiceDate: Date;
+  dueDate: Date;
+  amount: number;
+  lineItems: any[];
+}) {
+  try {
+    return await db
+      .update(invoice)
+      .set({
+        customerName,
+        vendorName,
+        invoiceNumber,
+        invoiceDate,
+        dueDate,
+        amount,
+        lineItems,
+      })
+      .where(eq(invoice.id, id));
+  } catch (error) {
+    console.error('Failed to update invoice in database', error);
     throw error;
   }
 }
