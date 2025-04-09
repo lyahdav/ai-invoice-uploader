@@ -32,11 +32,6 @@ export async function POST(request: Request) {
   try {
     const json = await request.json();
     const { messages, id, selectedChatModel = 'chat-model-large' } = json;
-    console.log('Processing chat request:', {
-      messageCount: messages.length,
-      lastMessage: messages[messages.length - 1],
-      attachments: messages[messages.length - 1]?.attachments,
-    });
 
     const userMessage = getMostRecentUserMessage(messages);
 

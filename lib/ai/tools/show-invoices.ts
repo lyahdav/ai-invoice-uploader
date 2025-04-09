@@ -7,8 +7,6 @@ export const showInvoices = ({ session }: { session: Session }) => {
     description: 'Display processed invoices without any additional processing',
     parameters: z.object({}),
     execute: async (args) => {
-      console.log('showInvoices, begin');
-
       try {
         // This tool simply returns a success message
         // The actual rendering of invoices is handled by the ProcessedInvoices component

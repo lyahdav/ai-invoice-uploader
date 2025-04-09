@@ -70,8 +70,6 @@ export const processInvoice = ({ session }: { session: Session }) => {
     description: 'Process an invoice PDF and extract information',
     parameters: z.object({}),
     execute: async (args, { messages }) => {
-      console.log('processInvoice, begin');
-
       try {
         // Get the last message which should contain the PDF data
         const lastMessage = messages[messages.length - 1];
@@ -118,8 +116,6 @@ export const processInvoice = ({ session }: { session: Session }) => {
             },
           ],
         });
-
-        console.log('processInvoice, extractedData: ', extractedData);
 
         // Generate a unique ID for the invoice
         const id = generateUUID();
