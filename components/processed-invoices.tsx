@@ -2,14 +2,27 @@
 
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import type { Invoice } from '@/lib/db/schema';
+import type { Invoice, LineItem } from '@/lib/db/schema';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { fetchInvoices, updateInvoiceAction } from '@/app/actions';
-import { ChevronDown, ChevronUp, ChevronsUpDown, Check, X } from 'lucide-react';
+import {
+  fetchInvoices,
+  updateInvoiceAction,
+  fetchLineItems,
+} from '@/app/actions';
+import {
+  ChevronDown,
+  ChevronUp,
+  ChevronsUpDown,
+  Check,
+  X,
+  Plus,
+  Minus,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import React from 'react';
 
 type SortColumn = 'invoiceDate' | 'dueDate' | 'amount' | 'vendorName' | null;
 type SortDirection = 'asc' | 'desc';
@@ -30,6 +43,13 @@ export default function ProcessedInvoices() {
     null,
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [expandedInvoices, setExpandedInvoices] = useState<
+    Record<string, boolean>
+  >({});
+  const [lineItems, setLineItems] = useState<Record<string, LineItem[]>>({});
+  const [loadingLineItems, setLoadingLineItems] = useState<
+    Record<string, boolean>
+  >({});
 
   useEffect(() => {
     const loadInvoices = async () => {
@@ -184,6 +204,36 @@ export default function ProcessedInvoices() {
     }
   };
 
+  const toggleExpandInvoice = async (invoiceId: string) => {
+    // Toggle the expanded state
+    setExpandedInvoices((prev) => ({
+      ...prev,
+      [invoiceId]: !prev[invoiceId],
+    }));
+
+    // If we're expanding and don't have line items yet, fetch them
+    if (!expandedInvoices[invoiceId] && !lineItems[invoiceId]) {
+      setLoadingLineItems((prev) => ({ ...prev, [invoiceId]: true }));
+
+      try {
+        const result = await fetchLineItems({ id: invoiceId });
+        if (result.success && result.data) {
+          setLineItems((prev) => ({
+            ...prev,
+            [invoiceId]: result.data,
+          }));
+        } else {
+          toast.error(result.error || 'Failed to load line items');
+        }
+      } catch (err) {
+        console.error('Error fetching line items:', err);
+        toast.error('Failed to load line items');
+      } finally {
+        setLoadingLineItems((prev) => ({ ...prev, [invoiceId]: false }));
+      }
+    }
+  };
+
   if (loading) {
     return <InvoiceTableSkeleton />;
   }
@@ -226,6 +276,7 @@ export default function ProcessedInvoices() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b">
+                <th className="py-2 px-4 text-left font-medium w-10" />
                 <th className="py-2 px-4 text-left font-medium">Invoice #</th>
                 <th className="py-2 px-4 text-left font-medium">Customer</th>
                 <th className="py-2 px-4 text-left font-medium">
@@ -271,249 +322,320 @@ export default function ProcessedInvoices() {
             </thead>
             <tbody>
               {sortedInvoices.map((invoice) => (
-                <tr key={invoice.id} className="border-b hover:bg-muted/50">
-                  <td className="py-2 px-4">
-                    {editingInvoice?.id === invoice.id &&
-                    editingInvoice.field === 'invoiceNumber' ? (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          value={editingInvoice.value as string}
-                          onChange={handleInputChange}
-                          className="h-8 w-full"
-                        />
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={saveEdit}
-                          disabled={isSaving}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={cancelEditing}
-                          disabled={isSaving}
-                          className="h-8 w-8 p-0"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div
-                        className="cursor-pointer hover:underline"
-                        onClick={() => startEditing(invoice, 'invoiceNumber')}
-                        role="button"
+                <React.Fragment key={invoice.id}>
+                  <tr className="border-b hover:bg-muted/50">
+                    <td className="py-2 px-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => toggleExpandInvoice(invoice.id)}
                       >
-                        {invoice.invoiceNumber}
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-2 px-4">
-                    {editingInvoice?.id === invoice.id &&
-                    editingInvoice.field === 'customerName' ? (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          value={editingInvoice.value as string}
-                          onChange={handleInputChange}
-                          className="h-8 w-full"
-                        />
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={saveEdit}
-                          disabled={isSaving}
-                          className="h-8 w-8 p-0"
+                        {expandedInvoices[invoice.id] ? (
+                          <Minus className="h-4 w-4" />
+                        ) : (
+                          <Plus className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </td>
+                    <td className="py-2 px-4">
+                      {editingInvoice?.id === invoice.id &&
+                      editingInvoice.field === 'invoiceNumber' ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            value={editingInvoice.value as string}
+                            onChange={handleInputChange}
+                            className="h-8 w-full"
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={saveEdit}
+                            disabled={isSaving}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={cancelEditing}
+                            disabled={isSaving}
+                            className="h-8 w-8 p-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div
+                          className="cursor-pointer hover:underline"
+                          onClick={() => startEditing(invoice, 'invoiceNumber')}
+                          role="button"
                         >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={cancelEditing}
-                          disabled={isSaving}
-                          className="h-8 w-8 p-0"
+                          {invoice.invoiceNumber}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-2 px-4">
+                      {editingInvoice?.id === invoice.id &&
+                      editingInvoice.field === 'customerName' ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            value={editingInvoice.value as string}
+                            onChange={handleInputChange}
+                            className="h-8 w-full"
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={saveEdit}
+                            disabled={isSaving}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={cancelEditing}
+                            disabled={isSaving}
+                            className="h-8 w-8 p-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div
+                          className="cursor-pointer hover:underline"
+                          onClick={() => startEditing(invoice, 'customerName')}
+                          role="button"
                         >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div
-                        className="cursor-pointer hover:underline"
-                        onClick={() => startEditing(invoice, 'customerName')}
-                        role="button"
-                      >
-                        {invoice.customerName}
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-2 px-4">
-                    {editingInvoice?.id === invoice.id &&
-                    editingInvoice.field === 'vendorName' ? (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          value={editingInvoice.value as string}
-                          onChange={handleInputChange}
-                          className="h-8 w-full"
-                        />
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={saveEdit}
-                          disabled={isSaving}
-                          className="h-8 w-8 p-0"
+                          {invoice.customerName}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-2 px-4">
+                      {editingInvoice?.id === invoice.id &&
+                      editingInvoice.field === 'vendorName' ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            value={editingInvoice.value as string}
+                            onChange={handleInputChange}
+                            className="h-8 w-full"
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={saveEdit}
+                            disabled={isSaving}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={cancelEditing}
+                            disabled={isSaving}
+                            className="h-8 w-8 p-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div
+                          className="cursor-pointer hover:underline"
+                          onClick={() => startEditing(invoice, 'vendorName')}
+                          role="button"
                         >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={cancelEditing}
-                          disabled={isSaving}
-                          className="h-8 w-8 p-0"
+                          {invoice.vendorName}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-2 px-4">
+                      {editingInvoice?.id === invoice.id &&
+                      editingInvoice.field === 'invoiceDate' ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="date"
+                            value={format(
+                              editingInvoice.value as Date,
+                              'yyyy-MM-dd',
+                            )}
+                            onChange={handleInputChange}
+                            className="h-8 w-full"
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={saveEdit}
+                            disabled={isSaving}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={cancelEditing}
+                            disabled={isSaving}
+                            className="h-8 w-8 p-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div
+                          className="cursor-pointer hover:underline"
+                          onClick={() => startEditing(invoice, 'invoiceDate')}
+                          role="button"
                         >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div
-                        className="cursor-pointer hover:underline"
-                        onClick={() => startEditing(invoice, 'vendorName')}
-                        role="button"
-                      >
-                        {invoice.vendorName}
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-2 px-4">
-                    {editingInvoice?.id === invoice.id &&
-                    editingInvoice.field === 'invoiceDate' ? (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          type="date"
-                          value={format(
-                            editingInvoice.value as Date,
-                            'yyyy-MM-dd',
-                          )}
-                          onChange={handleInputChange}
-                          className="h-8 w-full"
-                        />
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={saveEdit}
-                          disabled={isSaving}
-                          className="h-8 w-8 p-0"
+                          {format(new Date(invoice.invoiceDate), 'MMM d, yyyy')}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-2 px-4">
+                      {editingInvoice?.id === invoice.id &&
+                      editingInvoice.field === 'dueDate' ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="date"
+                            value={format(
+                              editingInvoice.value as Date,
+                              'yyyy-MM-dd',
+                            )}
+                            onChange={handleInputChange}
+                            className="h-8 w-full"
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={saveEdit}
+                            disabled={isSaving}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={cancelEditing}
+                            disabled={isSaving}
+                            className="h-8 w-8 p-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div
+                          className="cursor-pointer hover:underline"
+                          onClick={() => startEditing(invoice, 'dueDate')}
+                          role="button"
                         >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={cancelEditing}
-                          disabled={isSaving}
-                          className="h-8 w-8 p-0"
+                          {format(new Date(invoice.dueDate), 'MMM d, yyyy')}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-2 px-4 text-right">
+                      {editingInvoice?.id === invoice.id &&
+                      editingInvoice.field === 'amount' ? (
+                        <div className="flex items-center gap-1 justify-end">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={editingInvoice.value as number}
+                            onChange={handleInputChange}
+                            className="h-8 w-24 text-right"
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={saveEdit}
+                            disabled={isSaving}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={cancelEditing}
+                            disabled={isSaving}
+                            className="h-8 w-8 p-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div
+                          className="cursor-pointer hover:underline text-right"
+                          onClick={() => startEditing(invoice, 'amount')}
+                          role="button"
                         >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div
-                        className="cursor-pointer hover:underline"
-                        onClick={() => startEditing(invoice, 'invoiceDate')}
-                        role="button"
-                      >
-                        {format(new Date(invoice.invoiceDate), 'MMM d, yyyy')}
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-2 px-4">
-                    {editingInvoice?.id === invoice.id &&
-                    editingInvoice.field === 'dueDate' ? (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          type="date"
-                          value={format(
-                            editingInvoice.value as Date,
-                            'yyyy-MM-dd',
-                          )}
-                          onChange={handleInputChange}
-                          className="h-8 w-full"
-                        />
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={saveEdit}
-                          disabled={isSaving}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={cancelEditing}
-                          disabled={isSaving}
-                          className="h-8 w-8 p-0"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div
-                        className="cursor-pointer hover:underline"
-                        onClick={() => startEditing(invoice, 'dueDate')}
-                        role="button"
-                      >
-                        {format(new Date(invoice.dueDate), 'MMM d, yyyy')}
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-2 px-4 text-right">
-                    {editingInvoice?.id === invoice.id &&
-                    editingInvoice.field === 'amount' ? (
-                      <div className="flex items-center gap-1 justify-end">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={editingInvoice.value as number}
-                          onChange={handleInputChange}
-                          className="h-8 w-24 text-right"
-                        />
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={saveEdit}
-                          disabled={isSaving}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={cancelEditing}
-                          disabled={isSaving}
-                          className="h-8 w-8 p-0"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div
-                        className="cursor-pointer hover:underline text-right"
-                        onClick={() => startEditing(invoice, 'amount')}
-                        role="button"
-                      >
-                        ${invoice.amount.toFixed(2)}
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-2 px-4">
-                    {format(new Date(invoice.createdAt), 'MMM d, yyyy')}
-                  </td>
-                </tr>
+                          ${invoice.amount.toFixed(2)}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-2 px-4">
+                      {format(new Date(invoice.createdAt), 'MMM d, yyyy')}
+                    </td>
+                  </tr>
+                  {expandedInvoices[invoice.id] && (
+                    <tr className="border-b bg-muted/30">
+                      <td colSpan={8} className="py-4 px-4">
+                        {loadingLineItems[invoice.id] ? (
+                          <div className="flex justify-center">
+                            <Skeleton className="h-20 w-full" />
+                          </div>
+                        ) : lineItems[invoice.id] &&
+                          lineItems[invoice.id].length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <table className="w-full border-collapse">
+                              <thead>
+                                <tr className="border-b">
+                                  <th className="py-2 px-4 text-left font-medium">
+                                    Description
+                                  </th>
+                                  <th className="py-2 px-4 text-right font-medium">
+                                    Quantity
+                                  </th>
+                                  <th className="py-2 px-4 text-right font-medium">
+                                    Unit Price
+                                  </th>
+                                  <th className="py-2 px-4 text-right font-medium">
+                                    Total
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {lineItems[invoice.id].map((item) => (
+                                  <tr key={item.id} className="border-b">
+                                    <td className="py-2 px-4">
+                                      {item.description}
+                                    </td>
+                                    <td className="py-2 px-4 text-right">
+                                      {item.quantity}
+                                    </td>
+                                    <td className="py-2 px-4 text-right">
+                                      ${item.unitPrice.toFixed(2)}
+                                    </td>
+                                    <td className="py-2 px-4 text-right">
+                                      ${item.total.toFixed(2)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-center text-muted-foreground py-4">
+                            No line items found for this invoice.
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

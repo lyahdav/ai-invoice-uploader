@@ -19,9 +19,15 @@ const FileSchema = z.object({
 // Schema for invoice validation
 const InvoiceValidationSchema = z.object({
   isInvoice: z.boolean().describe('Whether the document is an invoice'),
-  documentType: z.string().describe('The type of document (invoice, receipt, statement, etc.)'),
-  confidence: z.number().describe('Confidence score of the classification (0-1)'),
-  explanation: z.string().describe('Brief explanation of why this is or is not an invoice'),
+  documentType: z
+    .string()
+    .describe('The type of document (invoice, receipt, statement, etc.)'),
+  confidence: z
+    .number()
+    .describe('Confidence score of the classification (0-1)'),
+  explanation: z
+    .string()
+    .describe('Brief explanation of why this is or is not an invoice'),
 });
 
 export async function POST(request: Request) {
@@ -81,23 +87,26 @@ export async function POST(request: Request) {
                 - Customer/billing information
                 
                 Receipts, account statements, and other financial documents are NOT invoices.
-                Provide a confidence score and explanation for your classification.`
+                Provide a confidence score and explanation for your classification.`,
               },
               {
                 type: 'file',
                 data: fileBuffer,
                 mimeType: 'application/pdf',
-              }
-            ]
-          }
-        ]
+              },
+            ],
+          },
+        ],
       });
 
       // If the document is not an invoice, reject it
       if (!validationResult.isInvoice) {
-        return NextResponse.json({ 
-          error: `Upload rejected: This appears to be a ${validationResult.documentType}, not an invoice. ${validationResult.explanation}` 
-        }, { status: 400 });
+        return NextResponse.json(
+          {
+            error: `Upload rejected: This appears to be a ${validationResult.documentType}, not an invoice. ${validationResult.explanation}`,
+          },
+          { status: 400 },
+        );
       }
 
       // Generate unique filename with timestamp
@@ -114,7 +123,10 @@ export async function POST(request: Request) {
       });
     } catch (error) {
       console.error('Error processing PDF:', error);
-      return NextResponse.json({ error: 'Failed to process PDF file' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Failed to process PDF file' },
+        { status: 500 },
+      );
     }
   } catch (error) {
     console.error('Error processing request:', error);

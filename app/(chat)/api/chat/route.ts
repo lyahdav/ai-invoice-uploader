@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
-import {
-  createDataStreamResponse,
-  smoothStream,
-  streamText,
-} from 'ai';
+import { createDataStreamResponse, smoothStream, streamText } from 'ai';
 
 import { auth } from '@/app/(auth)/auth';
 import { myProvider } from '@/lib/ai/models';
@@ -35,10 +31,10 @@ export async function POST(request: Request) {
   try {
     const json = await request.json();
     const { messages, id, selectedChatModel = 'chat-model-large' } = json;
-    console.log('Processing chat request:', { 
+    console.log('Processing chat request:', {
       messageCount: messages.length,
       lastMessage: messages[messages.length - 1],
-      attachments: messages[messages.length - 1]?.attachments 
+      attachments: messages[messages.length - 1]?.attachments,
     });
 
     const userMessage = getMostRecentUserMessage(messages);
@@ -50,7 +46,9 @@ export async function POST(request: Request) {
     const chat = await getChatById({ id });
 
     if (!chat) {
-      const title = await generateTitleFromUserMessage({ message: userMessage });
+      const title = await generateTitleFromUserMessage({
+        message: userMessage,
+      });
       await saveChat({ id, userId: session.user.id, title });
     }
 
@@ -68,9 +66,7 @@ export async function POST(request: Request) {
           experimental_activeTools:
             selectedChatModel === 'chat-model-reasoning'
               ? []
-              : [
-                  'processInvoice',
-                ],
+              : ['processInvoice'],
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,
           tools: {
@@ -117,9 +113,12 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('Error processing request:', error);
-    return NextResponse.json({ 
-      error: `An error occurred: ${error instanceof Error ? error.message : String(error)}`
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: `An error occurred: ${error instanceof Error ? error.message : String(error)}`,
+      },
+      { status: 500 },
+    );
   }
 }
 

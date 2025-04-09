@@ -145,7 +145,14 @@ function PureMultimodalInput({
     formData.append('file', file);
 
     try {
-      console.log('Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type);
+      console.log(
+        'Uploading file:',
+        file.name,
+        'Size:',
+        file.size,
+        'Type:',
+        file.type,
+      );
       const response = await fetch('/api/files/upload', {
         method: 'POST',
         body: formData,
@@ -161,8 +168,8 @@ function PureMultimodalInput({
           name: pathname,
           contentType: contentType,
           metadata: {
-            dataUrl: url
-          }
+            dataUrl: url,
+          },
         };
       }
       const errorData = await response.json();

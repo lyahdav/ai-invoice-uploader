@@ -52,7 +52,7 @@ export function Chat({
     onError: async (error) => {
       console.error('Chat error:', error);
       let errorMessage = 'An error occurred, please try again!';
-      
+
       // Try to extract more detailed error message from the response
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -65,7 +65,7 @@ export function Chat({
           errorMessage = error.statusText || errorMessage;
         }
       }
-      
+
       toast.error(errorMessage);
     },
   });

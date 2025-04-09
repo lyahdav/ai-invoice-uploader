@@ -7,7 +7,7 @@ import { memo } from 'react';
 
 interface SuggestedActionsProps {
   chatId: string;
-  setInput:(value: string) => void;
+  setInput: (value: string) => void;
 }
 
 function PureSuggestedActions({ chatId, setInput }: SuggestedActionsProps) {

@@ -1,6 +1,10 @@
 'use server';
 
-import { getInvoices, updateInvoice } from '@/lib/db/queries';
+import {
+  getInvoices,
+  updateInvoice,
+  getLineItemsByInvoiceId,
+} from '@/lib/db/queries';
 
 export async function fetchInvoices() {
   try {
@@ -43,5 +47,15 @@ export async function updateInvoiceAction({
   } catch (error) {
     console.error('Error updating invoice:', error);
     return { success: false, error: 'Failed to update invoice' };
+  }
+}
+
+export async function fetchLineItems({ id }: { id: string }) {
+  try {
+    const lineItems = await getLineItemsByInvoiceId({ id });
+    return { success: true, data: lineItems };
+  } catch (error) {
+    console.error('Error fetching line items:', error);
+    return { success: false, error: 'Failed to fetch line items' };
   }
 }
