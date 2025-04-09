@@ -448,3 +448,35 @@ export async function getLineItemsByInvoiceId({ id }: { id: string }) {
     throw error;
   }
 }
+
+export async function updateLineItem({
+  id,
+  description,
+  quantity,
+  unitPrice,
+  total,
+}: {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}) {
+  try {
+    // Update the line item
+    await db
+      .update(lineItem)
+      .set({
+        description,
+        quantity,
+        unitPrice,
+        total,
+      })
+      .where(eq(lineItem.id, id));
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to update line item in database', error);
+    throw error;
+  }
+}

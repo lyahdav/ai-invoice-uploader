@@ -4,6 +4,7 @@ import {
   getInvoices,
   updateInvoice,
   getLineItemsByInvoiceId,
+  updateLineItem,
 } from '@/lib/db/queries';
 
 export async function fetchInvoices() {
@@ -57,5 +58,33 @@ export async function fetchLineItems({ id }: { id: string }) {
   } catch (error) {
     console.error('Error fetching line items:', error);
     return { success: false, error: 'Failed to fetch line items' };
+  }
+}
+
+export async function updateLineItemAction({
+  id,
+  description,
+  quantity,
+  unitPrice,
+  total,
+}: {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}) {
+  try {
+    await updateLineItem({
+      id,
+      description,
+      quantity,
+      unitPrice,
+      total,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating line item:', error);
+    return { success: false, error: 'Failed to update line item' };
   }
 }

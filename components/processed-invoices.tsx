@@ -9,6 +9,7 @@ import {
   fetchInvoices,
   updateInvoiceAction,
   fetchLineItems,
+  updateLineItemAction,
 } from '@/app/actions';
 import {
   ChevronDown,
@@ -33,6 +34,12 @@ type EditingInvoice = {
   value: string | number | Date;
 };
 
+type EditingLineItem = {
+  id: string;
+  field: keyof LineItem;
+  value: string | number;
+};
+
 export default function ProcessedInvoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +49,10 @@ export default function ProcessedInvoices() {
   const [editingInvoice, setEditingInvoice] = useState<EditingInvoice | null>(
     null,
   );
+  const [editingLineItem, setEditingLineItem] =
+    useState<EditingLineItem | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingLineItem, setIsSavingLineItem] = useState(false);
   const [expandedInvoices, setExpandedInvoices] = useState<
     Record<string, boolean>
   >({});
@@ -231,6 +241,113 @@ export default function ProcessedInvoices() {
       } finally {
         setLoadingLineItems((prev) => ({ ...prev, [invoiceId]: false }));
       }
+    }
+  };
+
+  const startEditingLineItem = (item: LineItem, field: keyof LineItem) => {
+    let value: string | number;
+
+    if (field === 'quantity' || field === 'unitPrice' || field === 'total') {
+      value = item[field] as number;
+    } else {
+      value = item[field] as string;
+    }
+
+    setEditingLineItem({ id: item.id, field, value });
+  };
+
+  const cancelEditingLineItem = () => {
+    setEditingLineItem(null);
+  };
+
+  const handleLineItemInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    if (!editingLineItem) return;
+
+    let value: string | number;
+
+    if (e.target.type === 'number') {
+      value = Number.parseFloat(e.target.value);
+    } else {
+      value = e.target.value;
+    }
+
+    setEditingLineItem({ ...editingLineItem, value });
+  };
+
+  const saveLineItemEdit = async () => {
+    if (!editingLineItem) return;
+
+    setIsSavingLineItem(true);
+
+    try {
+      // Find the invoice that contains this line item
+      const invoiceId = Object.keys(lineItems).find((id) =>
+        lineItems[id].some((item) => item.id === editingLineItem.id),
+      );
+
+      if (!invoiceId) throw new Error('Invoice not found for this line item');
+
+      const lineItemList = lineItems[invoiceId];
+      const lineItem = lineItemList.find(
+        (item) => item.id === editingLineItem.id,
+      );
+
+      if (!lineItem) throw new Error('Line item not found');
+
+      const updatedLineItem = { ...lineItem };
+
+      // Update the specific field
+      if (
+        editingLineItem.field === 'quantity' ||
+        editingLineItem.field === 'unitPrice' ||
+        editingLineItem.field === 'total'
+      ) {
+        updatedLineItem[editingLineItem.field] =
+          editingLineItem.value as number;
+      } else if (editingLineItem.field === 'description') {
+        updatedLineItem[editingLineItem.field] =
+          editingLineItem.value as string;
+      } else {
+        throw new Error(`Invalid field: ${editingLineItem.field}`);
+      }
+
+      // Recalculate total if quantity or unit price changed
+      if (
+        editingLineItem.field === 'quantity' ||
+        editingLineItem.field === 'unitPrice'
+      ) {
+        updatedLineItem.total =
+          updatedLineItem.quantity * updatedLineItem.unitPrice;
+      }
+
+      const result = await updateLineItemAction({
+        id: updatedLineItem.id,
+        description: updatedLineItem.description,
+        quantity: updatedLineItem.quantity,
+        unitPrice: updatedLineItem.unitPrice,
+        total: updatedLineItem.total,
+      });
+
+      if (result.success) {
+        // Update the local state
+        setLineItems((prev) => ({
+          ...prev,
+          [invoiceId]: prev[invoiceId].map((item) =>
+            item.id === updatedLineItem.id ? updatedLineItem : item,
+          ),
+        }));
+        toast.success('Line item updated successfully');
+      } else {
+        toast.error(result.error || 'Failed to update line item');
+      }
+    } catch (error) {
+      console.error('Error saving line item:', error);
+      toast.error('Failed to update line item');
+    } finally {
+      setIsSavingLineItem(false);
+      setEditingLineItem(null);
     }
   };
 
@@ -611,16 +728,188 @@ export default function ProcessedInvoices() {
                                 {lineItems[invoice.id].map((item) => (
                                   <tr key={item.id} className="border-b">
                                     <td className="py-2 px-4">
-                                      {item.description}
+                                      {editingLineItem?.id === item.id &&
+                                      editingLineItem.field ===
+                                        'description' ? (
+                                        <div className="flex items-center gap-1">
+                                          <Input
+                                            value={
+                                              editingLineItem.value as string
+                                            }
+                                            onChange={handleLineItemInputChange}
+                                            className="h-8 w-full"
+                                          />
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={saveLineItemEdit}
+                                            disabled={isSavingLineItem}
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            <Check className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={cancelEditingLineItem}
+                                            disabled={isSavingLineItem}
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <div
+                                          className="cursor-pointer hover:underline"
+                                          onClick={() =>
+                                            startEditingLineItem(
+                                              item,
+                                              'description',
+                                            )
+                                          }
+                                          role="button"
+                                        >
+                                          {item.description}
+                                        </div>
+                                      )}
                                     </td>
                                     <td className="py-2 px-4 text-right">
-                                      {item.quantity}
+                                      {editingLineItem?.id === item.id &&
+                                      editingLineItem.field === 'quantity' ? (
+                                        <div className="flex items-center gap-1 justify-end">
+                                          <Input
+                                            type="number"
+                                            step="1"
+                                            value={
+                                              editingLineItem.value as number
+                                            }
+                                            onChange={handleLineItemInputChange}
+                                            className="h-8 w-24 text-right"
+                                          />
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={saveLineItemEdit}
+                                            disabled={isSavingLineItem}
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            <Check className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={cancelEditingLineItem}
+                                            disabled={isSavingLineItem}
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <div
+                                          className="cursor-pointer hover:underline text-right"
+                                          onClick={() =>
+                                            startEditingLineItem(
+                                              item,
+                                              'quantity',
+                                            )
+                                          }
+                                          role="button"
+                                        >
+                                          {item.quantity}
+                                        </div>
+                                      )}
                                     </td>
                                     <td className="py-2 px-4 text-right">
-                                      ${item.unitPrice.toFixed(2)}
+                                      {editingLineItem?.id === item.id &&
+                                      editingLineItem.field === 'unitPrice' ? (
+                                        <div className="flex items-center gap-1 justify-end">
+                                          <Input
+                                            type="number"
+                                            step="0.01"
+                                            value={
+                                              editingLineItem.value as number
+                                            }
+                                            onChange={handleLineItemInputChange}
+                                            className="h-8 w-24 text-right"
+                                          />
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={saveLineItemEdit}
+                                            disabled={isSavingLineItem}
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            <Check className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={cancelEditingLineItem}
+                                            disabled={isSavingLineItem}
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <div
+                                          className="cursor-pointer hover:underline text-right"
+                                          onClick={() =>
+                                            startEditingLineItem(
+                                              item,
+                                              'unitPrice',
+                                            )
+                                          }
+                                          role="button"
+                                        >
+                                          ${item.unitPrice.toFixed(2)}
+                                        </div>
+                                      )}
                                     </td>
                                     <td className="py-2 px-4 text-right">
-                                      ${item.total.toFixed(2)}
+                                      {editingLineItem?.id === item.id &&
+                                      editingLineItem.field === 'total' ? (
+                                        <div className="flex items-center gap-1 justify-end">
+                                          <Input
+                                            type="number"
+                                            step="0.01"
+                                            value={
+                                              editingLineItem.value as number
+                                            }
+                                            onChange={handleLineItemInputChange}
+                                            className="h-8 w-24 text-right"
+                                          />
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={saveLineItemEdit}
+                                            disabled={isSavingLineItem}
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            <Check className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={cancelEditingLineItem}
+                                            disabled={isSavingLineItem}
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <div
+                                          className="cursor-pointer hover:underline text-right"
+                                          onClick={() =>
+                                            startEditingLineItem(item, 'total')
+                                          }
+                                          role="button"
+                                        >
+                                          ${item.total.toFixed(2)}
+                                        </div>
+                                      )}
                                     </td>
                                   </tr>
                                 ))}
