@@ -164,6 +164,8 @@ const PurePreviewMessage = ({
                           />
                         ) : toolName === 'processInvoice' ? (
                           <ProcessedInvoices />
+                        ) : toolName === 'showInvoices' ? (
+                          <ProcessedInvoices />
                         ) : (
                           <pre>{JSON.stringify(result, null, 2)}</pre>
                         )}

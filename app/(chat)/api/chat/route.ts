@@ -18,6 +18,7 @@ import {
 
 import { generateTitleFromUserMessage } from '../../actions';
 import { processInvoice } from '@/lib/ai/tools/process-invoice';
+import { showInvoices } from '@/lib/ai/tools/show-invoices';
 
 export const maxDuration = 60;
 
@@ -66,11 +67,12 @@ export async function POST(request: Request) {
           experimental_activeTools:
             selectedChatModel === 'chat-model-reasoning'
               ? []
-              : ['processInvoice'],
+              : ['processInvoice', 'showInvoices'],
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,
           tools: {
             processInvoice: processInvoice({ session }),
+            showInvoices: showInvoices({ session }),
           },
           onFinish: async ({ response, reasoning }) => {
             if (session.user?.id) {

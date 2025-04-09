@@ -17,6 +17,11 @@ function PureSuggestedActions({ chatId, setInput }: SuggestedActionsProps) {
       label: 'Process the attached invoice and save to database',
       action: 'Process this invoice',
     },
+    {
+      title: 'Show all invoices',
+      label: 'Show all invoices in the database',
+      action: 'Show all invoices',
+    },
   ];
 
   return (
