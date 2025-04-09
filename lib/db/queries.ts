@@ -492,3 +492,36 @@ export async function deleteLineItem({ id }: { id: string }) {
     throw error;
   }
 }
+
+export async function insertLineItem({
+  id,
+  invoiceId,
+  description,
+  quantity,
+  unitPrice,
+  total,
+}: {
+  id: string;
+  invoiceId: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}) {
+  try {
+    // Insert the line item
+    await db.insert(lineItem).values({
+      id,
+      invoiceId,
+      description,
+      quantity,
+      unitPrice,
+      total,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to insert line item into database', error);
+    throw error;
+  }
+}

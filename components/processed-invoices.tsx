@@ -11,6 +11,7 @@ import {
   fetchLineItems,
   updateLineItemAction,
   deleteLineItemAction,
+  addLineItemAction,
 } from '@/app/actions';
 import {
   ChevronDown,
@@ -52,6 +53,12 @@ type EditingLineItem = {
   value: string | number;
 };
 
+type NewLineItem = {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+};
+
 export default function ProcessedInvoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +84,15 @@ export default function ProcessedInvoices() {
     id: string;
     invoiceId: string;
   } | null>(null);
+  const [newLineItem, setNewLineItem] = useState<NewLineItem>({
+    description: '',
+    quantity: 1,
+    unitPrice: 0,
+  });
+  const [isAddingLineItem, setIsAddingLineItem] = useState(false);
+  const [invoiceIdForNewLineItem, setInvoiceIdForNewLineItem] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     const loadInvoices = async () => {
@@ -394,6 +410,74 @@ export default function ProcessedInvoices() {
       setIsDeletingLineItem(false);
       setLineItemToDelete(null);
     }
+  };
+
+  const handleAddLineItem = async (invoiceId: string) => {
+    setInvoiceIdForNewLineItem(invoiceId);
+  };
+
+  const handleNewLineItemChange = (
+    field: keyof NewLineItem,
+    value: string | number,
+  ) => {
+    setNewLineItem((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const saveNewLineItem = async () => {
+    if (!invoiceIdForNewLineItem) return;
+
+    setIsAddingLineItem(true);
+
+    try {
+      const result = await addLineItemAction({
+        invoiceId: invoiceIdForNewLineItem,
+        description: newLineItem.description,
+        quantity: newLineItem.quantity,
+        unitPrice: newLineItem.unitPrice,
+      });
+
+      if (result.success) {
+        // Refresh the line items for this invoice
+        const lineItemsResult = await fetchLineItems({
+          id: invoiceIdForNewLineItem,
+        });
+        if (lineItemsResult.success && lineItemsResult.data) {
+          setLineItems((prev) => ({
+            ...prev,
+            [invoiceIdForNewLineItem]: lineItemsResult.data,
+          }));
+        }
+
+        // Reset the form
+        setNewLineItem({
+          description: '',
+          quantity: 1,
+          unitPrice: 0,
+        });
+        setInvoiceIdForNewLineItem(null);
+        toast.success('Line item added successfully');
+      } else {
+        toast.error(result.error || 'Failed to add line item');
+      }
+    } catch (error) {
+      console.error('Error adding line item:', error);
+      toast.error('Failed to add line item');
+    } finally {
+      setIsAddingLineItem(false);
+    }
+  };
+
+  const cancelAddLineItem = () => {
+    setNewLineItem({
+      description: '',
+      quantity: 1,
+      unitPrice: 0,
+    });
+    setInvoiceIdForNewLineItem(null);
+    setIsAddingLineItem(false);
   };
 
   if (loading) {
@@ -977,12 +1061,113 @@ export default function ProcessedInvoices() {
                                     </td>
                                   </tr>
                                 ))}
+                                {invoiceIdForNewLineItem === invoice.id && (
+                                  <tr className="border-b">
+                                    <td className="py-2 px-4">
+                                      <Input
+                                        value={newLineItem.description}
+                                        onChange={(e) =>
+                                          handleNewLineItemChange(
+                                            'description',
+                                            e.target.value,
+                                          )
+                                        }
+                                        placeholder="Description"
+                                        className="h-8 w-full"
+                                      />
+                                    </td>
+                                    <td className="py-2 px-4 text-right">
+                                      <Input
+                                        type="number"
+                                        step="1"
+                                        value={newLineItem.quantity}
+                                        onChange={(e) =>
+                                          handleNewLineItemChange(
+                                            'quantity',
+                                            Number.parseFloat(e.target.value),
+                                          )
+                                        }
+                                        className="h-8 w-24 text-right"
+                                      />
+                                    </td>
+                                    <td className="py-2 px-4 text-right">
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={newLineItem.unitPrice}
+                                        onChange={(e) =>
+                                          handleNewLineItemChange(
+                                            'unitPrice',
+                                            Number.parseFloat(e.target.value),
+                                          )
+                                        }
+                                        className="h-8 w-24 text-right"
+                                      />
+                                    </td>
+                                    <td className="py-2 px-4 text-right">
+                                      $
+                                      {(
+                                        newLineItem.quantity *
+                                        newLineItem.unitPrice
+                                      ).toFixed(2)}
+                                    </td>
+                                    <td className="py-2 px-4 text-right">
+                                      <div className="flex justify-end gap-1">
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={saveNewLineItem}
+                                          disabled={
+                                            isAddingLineItem ||
+                                            !newLineItem.description
+                                          }
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <Check className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={cancelAddLineItem}
+                                          disabled={isAddingLineItem}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
                               </tbody>
                             </table>
+                            <div className="mt-2 flex justify-end">
+                              {invoiceIdForNewLineItem !== invoice.id && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleAddLineItem(invoice.id)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                  Add Line Item
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         ) : (
                           <div className="text-center text-muted-foreground py-4">
                             No line items found for this invoice.
+                            <div className="mt-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleAddLineItem(invoice.id)}
+                                className="flex items-center gap-1"
+                              >
+                                <Plus className="h-4 w-4" />
+                                Add Line Item
+                              </Button>
+                            </div>
                           </div>
                         )}
                       </td>

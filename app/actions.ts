@@ -6,6 +6,7 @@ import {
   getLineItemsByInvoiceId,
   updateLineItem,
   deleteLineItem,
+  insertLineItem,
 } from '@/lib/db/queries';
 
 export async function fetchInvoices() {
@@ -97,5 +98,36 @@ export async function deleteLineItemAction({ id }: { id: string }) {
   } catch (error) {
     console.error('Error deleting line item:', error);
     return { success: false, error: 'Failed to delete line item' };
+  }
+}
+
+export async function addLineItemAction({
+  invoiceId,
+  description,
+  quantity,
+  unitPrice,
+}: {
+  invoiceId: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}) {
+  try {
+    const id = crypto.randomUUID();
+    const total = quantity * unitPrice;
+
+    await insertLineItem({
+      id,
+      invoiceId,
+      description,
+      quantity,
+      unitPrice,
+      total,
+    });
+
+    return { success: true, data: { id } };
+  } catch (error) {
+    console.error('Error adding line item:', error);
+    return { success: false, error: 'Failed to add line item' };
   }
 }
