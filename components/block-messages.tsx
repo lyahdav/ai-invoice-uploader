@@ -33,9 +33,7 @@ function PureBlockMessages({
   const messagesEndRef = useScrollToBottom<HTMLDivElement>(messages.length);
 
   return (
-    <div
-      className="flex flex-col gap-4 h-full items-center overflow-y-scroll px-4 pt-20"
-    >
+    <div className="flex flex-col gap-4 h-full items-center overflow-y-scroll px-4 pt-20">
       {messages.map((message, index) => (
         <PreviewMessage
           chatId={chatId}
