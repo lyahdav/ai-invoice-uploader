@@ -26,6 +26,16 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import React from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type SortColumn = 'invoiceDate' | 'dueDate' | 'amount' | 'vendorName' | null;
 type SortDirection = 'asc' | 'desc';
@@ -63,6 +73,10 @@ export default function ProcessedInvoices() {
     Record<string, boolean>
   >({});
   const [isDeletingLineItem, setIsDeletingLineItem] = useState(false);
+  const [lineItemToDelete, setLineItemToDelete] = useState<{
+    id: string;
+    invoiceId: string;
+  } | null>(null);
 
   useEffect(() => {
     const loadInvoices = async () => {
@@ -378,6 +392,7 @@ export default function ProcessedInvoices() {
       toast.error('Failed to delete line item');
     } finally {
       setIsDeletingLineItem(false);
+      setLineItemToDelete(null);
     }
   };
 
@@ -949,10 +964,10 @@ export default function ProcessedInvoices() {
                                         size="sm"
                                         variant="ghost"
                                         onClick={() =>
-                                          handleDeleteLineItem(
-                                            item.id,
-                                            invoice.id,
-                                          )
+                                          setLineItemToDelete({
+                                            id: item.id,
+                                            invoiceId: invoice.id,
+                                          })
                                         }
                                         disabled={isDeletingLineItem}
                                         className="h-8 w-8 p-0 text-destructive hover:text-destructive/80"
@@ -979,6 +994,37 @@ export default function ProcessedInvoices() {
           </table>
         </div>
       </CardContent>
+      <AlertDialog
+        open={!!lineItemToDelete}
+        onOpenChange={(open) => !open && setLineItemToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Are you sure you want to delete this line item?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              line item.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                lineItemToDelete &&
+                handleDeleteLineItem(
+                  lineItemToDelete.id,
+                  lineItemToDelete.invoiceId,
+                )
+              }
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
