@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { auth } from '@/app/(auth)/auth';
 import { generateObject } from 'ai';
 import { myProvider } from '@/lib/ai/models';
+import type { FilePart, ImagePart } from 'ai';
 
 // Use Blob instead of File since File is not available in Node.js environment
 const FileSchema = z.object({
@@ -11,9 +12,19 @@ const FileSchema = z.object({
     .refine((file) => file.size <= 10 * 1024 * 1024, {
       message: 'File size should be less than 10MB',
     })
-    .refine((file) => ['application/pdf'].includes(file.type), {
-      message: 'File type should be PDF',
-    }),
+    .refine(
+      (file) =>
+        [
+          'application/pdf',
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+        ].includes(file.type),
+      {
+        message: 'File type should be PDF or an image (JPEG, PNG, GIF, WebP)',
+      },
+    ),
 });
 
 // Schema for invoice validation
@@ -90,10 +101,13 @@ export async function POST(request: Request) {
                 Provide a confidence score and explanation for your classification.`,
               },
               {
-                type: 'file',
-                data: fileBuffer,
-                mimeType: 'application/pdf',
-              },
+                type: file.type.startsWith('application/pdf')
+                  ? 'file'
+                  : 'image',
+                ...(file.type.startsWith('application/pdf')
+                  ? { data: fileBuffer, mimeType: file.type }
+                  : { image: fileBuffer, mimeType: file.type }),
+              } as FilePart | ImagePart,
             ],
           },
         ],
@@ -122,9 +136,9 @@ export async function POST(request: Request) {
         contentType: file.type,
       });
     } catch (error) {
-      console.error('Error processing PDF:', error);
+      console.error('Error processing file:', error);
       return NextResponse.json(
-        { error: 'Failed to process PDF file' },
+        { error: 'Failed to process file' },
         { status: 500 },
       );
     }

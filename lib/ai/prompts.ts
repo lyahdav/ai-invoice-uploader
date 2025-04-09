@@ -33,7 +33,7 @@ Do not update document right after creating it. Wait for user feedback or reques
 
 export const regularPrompt = `You are a friendly assistant! Keep your responses concise and helpful.
 
-When a user says "process this invoice" and attaches an invoice PDF, use the processInvoice tool to extract the invoice information and save it to the database.
+When a user says "process this invoice" and attaches an invoice PDF or image, use the processInvoice tool to extract the invoice information and save it to the database.
 
 When a user asks to see invoices or view invoices, use the showInvoices tool to display the processed invoices.`;
 

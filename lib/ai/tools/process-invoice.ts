@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { generateUUID } from '@/lib/utils';
 import { saveInvoice } from '@/lib/db/queries';
 import type { Session } from 'next-auth';
-import { tool, generateObject, type FilePart } from 'ai';
+import { tool, generateObject, type FilePart, type ImagePart, type DataContent } from 'ai';
 import { myProvider } from '../models';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import Database from 'better-sqlite3';
@@ -67,27 +67,57 @@ async function saveLineItems(
 
 export const processInvoice = ({ session }: { session: Session }) => {
   return tool({
-    description: 'Process an invoice PDF and extract information',
+    description: 'Process an invoice PDF or image and extract information',
     parameters: z.object({}),
     execute: async (args, { messages }) => {
       try {
-        // Get the last message which should contain the PDF data
+        // Get the last message which should contain the file data
         const lastMessage = messages[messages.length - 1];
 
         if (!lastMessage || !lastMessage.content) {
-          throw new Error('No PDF data found in the messages');
+          throw new Error('No file data found in the messages');
         }
         if (!Array.isArray(lastMessage.content)) {
           throw new Error('Last message content is not an array');
         }
         const lastContentItem =
           lastMessage.content[lastMessage.content.length - 1];
-        if (lastContentItem.type !== 'file') {
-          throw new Error('Last message content is not a file');
+        if (
+          lastContentItem.type !== 'file' &&
+          lastContentItem.type !== 'image'
+        ) {
+          throw new Error('Last message content is not a file or image');
         }
-        const pdfData = (lastContentItem as FilePart).data;
 
-        // Use generateObject to extract structured data from the PDF
+        // Handle both FilePart and ImagePart types
+        let fileData: DataContent | URL;
+        let fileMimeType: string;
+
+        if (lastContentItem.type === 'file') {
+          fileData = (lastContentItem as FilePart).data;
+          fileMimeType = (lastContentItem as FilePart).mimeType;
+        } else {
+          // It's an image
+          fileData = (lastContentItem as ImagePart).image;
+          fileMimeType =
+            (lastContentItem as ImagePart).mimeType || 'image/jpeg'; // Provide a default if undefined
+        }
+
+        const attachment: ImagePart | FilePart = fileMimeType.startsWith(
+          'application/pdf',
+        )
+          ? {
+              type: 'file',
+              data: fileData,
+              mimeType: fileMimeType,
+            }
+          : {
+              type: 'image',
+              image: fileData,
+              mimeType: fileMimeType,
+            };
+
+        // Use generateObject to extract structured data from the file
         const { object: extractedData } = await generateObject({
           model: myProvider.languageModel('chat-model-large'),
           schema: invoiceDataSchema,
@@ -97,7 +127,7 @@ export const processInvoice = ({ session }: { session: Session }) => {
               content: [
                 {
                   type: 'text',
-                  text: `Extract the following information from this invoice PDF:
+                  text: `Extract the following information from this invoice ${fileMimeType.startsWith('image/') ? 'image' : 'PDF'}:
 
                   - Customer name
                   - Vendor name
@@ -107,11 +137,7 @@ export const processInvoice = ({ session }: { session: Session }) => {
                   - Total amount
                   - Line items`,
                 },
-                {
-                  type: 'file',
-                  data: pdfData,
-                  mimeType: 'application/pdf',
-                },
+                attachment,
               ],
             },
           ],

@@ -19,9 +19,11 @@ export const Overview = () => {
           <MessageIcon size={32} />
         </p>
         <p>
-          This is a chatbot for processing invoices. Attach a PDF invoice below
-          and ask it to &quot;Process this invoice&quot; to extract key
-          information from the invoice and save it to the database.
+          This is a chatbot for processing invoices. Attach a PDF invoice or
+          image below and ask it to &quot;Process this invoice&quot; to extract
+          key information from the invoice and save it to the database. Ask it
+          to &quot;Show all invoices&quot; to see all the invoices in the
+          database.
         </p>
       </div>
     </motion.div>
