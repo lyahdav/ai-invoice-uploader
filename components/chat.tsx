@@ -49,20 +49,22 @@ export function Chat({
     onFinish: () => {
       mutate('/api/history');
     },
-    onError: async (error) => {
+    onError: async (error: unknown) => {
       console.error('Chat error:', error);
       let errorMessage = 'An error occurred, please try again!';
 
       // Try to extract more detailed error message from the response
       if (error instanceof Error) {
         errorMessage = error.message;
-      } else if (error instanceof Response) {
+      } else if (error && typeof error === 'object' && 'json' in error) {
         try {
-          const data = await error.json();
+          const response = error as Response;
+          const data = await response.json();
           errorMessage = data.error || errorMessage;
         } catch (e) {
           // If we can't parse the error response, use the status text
-          errorMessage = error.statusText || errorMessage;
+          const response = error as Response;
+          errorMessage = response.statusText || errorMessage;
         }
       }
 
