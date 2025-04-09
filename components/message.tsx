@@ -20,7 +20,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { MessageEditor } from './message-editor';
 import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
-import ProcessedInvoices from './processed-invoices';
+import ProcessedInvoices from './invoices/processed-invoices';
 
 const PurePreviewMessage = ({
   chatId,
