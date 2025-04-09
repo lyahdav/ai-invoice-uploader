@@ -6,12 +6,11 @@ import { auth } from '@/app/(auth)/auth';
 const FileSchema = z.object({
   file: z
     .instanceof(Blob)
-    .refine((file) => file.size <= 5 * 1024 * 1024, {
-      message: 'File size should be less than 5MB',
+    .refine((file) => file.size <= 10 * 1024 * 1024, {
+      message: 'File size should be less than 10MB',
     })
-    // Update the file type based on the kind of files you want to accept
-    .refine((file) => ['image/jpeg', 'image/png'].includes(file.type), {
-      message: 'File type should be JPEG or PNG',
+    .refine((file) => ['application/pdf'].includes(file.type), {
+      message: 'File type should be PDF',
     }),
 });
 
@@ -54,7 +53,7 @@ export async function POST(request: Request) {
       const timestamp = Date.now();
       const uniqueFilename = `${timestamp}-${filename}`;
 
-      // Create data URL for immediate preview
+      // Create data URL for immediate preview and vision API
       const dataURL = `data:${file.type};base64,${buffer.toString('base64')}`;
 
       return NextResponse.json({
@@ -63,9 +62,11 @@ export async function POST(request: Request) {
         contentType: file.type,
       });
     } catch (error) {
-      return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+      console.error('Error processing PDF:', error);
+      return NextResponse.json({ error: 'Failed to process PDF file' }, { status: 500 });
     }
   } catch (error) {
+    console.error('Error processing request:', error);
     return NextResponse.json(
       { error: 'Failed to process request' },
       { status: 500 },

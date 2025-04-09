@@ -93,7 +93,7 @@ export function DocumentPreview({
           content: block.content,
           id: block.documentId,
           createdAt: new Date(),
-          userId: 'noop',
+          // userId: 'noop',
         }
       : null;
 

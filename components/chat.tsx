@@ -49,8 +49,24 @@ export function Chat({
     onFinish: () => {
       mutate('/api/history');
     },
-    onError: (error) => {
-      toast.error('An error occured, please try again!');
+    onError: async (error) => {
+      console.error('Chat error:', error);
+      let errorMessage = 'An error occurred, please try again!';
+      
+      // Try to extract more detailed error message from the response
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error instanceof Response) {
+        try {
+          const data = await error.json();
+          errorMessage = data.error || errorMessage;
+        } catch (e) {
+          // If we can't parse the error response, use the status text
+          errorMessage = error.statusText || errorMessage;
+        }
+      }
+      
+      toast.error(errorMessage);
     },
   });
 

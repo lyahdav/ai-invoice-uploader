@@ -18,6 +18,7 @@ export const myProvider = customProvider({
     }),
     'title-model': openai('gpt-4o-mini'),
     'block-model': openai('gpt-4o-mini'),
+    'vision-model': openai('gpt-4-vision-preview'),
   },
   imageModels: {
     'small-model': openai.image('dall-e-2'),
