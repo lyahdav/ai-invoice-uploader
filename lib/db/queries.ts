@@ -480,3 +480,15 @@ export async function updateLineItem({
     throw error;
   }
 }
+
+export async function deleteLineItem({ id }: { id: string }) {
+  try {
+    // Delete the line item
+    await db.delete(lineItem).where(eq(lineItem.id, id));
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to delete line item from database', error);
+    throw error;
+  }
+}

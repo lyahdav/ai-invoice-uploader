@@ -10,6 +10,7 @@ import {
   updateInvoiceAction,
   fetchLineItems,
   updateLineItemAction,
+  deleteLineItemAction,
 } from '@/app/actions';
 import {
   ChevronDown,
@@ -19,6 +20,7 @@ import {
   X,
   Plus,
   Minus,
+  Trash2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -60,6 +62,7 @@ export default function ProcessedInvoices() {
   const [loadingLineItems, setLoadingLineItems] = useState<
     Record<string, boolean>
   >({});
+  const [isDeletingLineItem, setIsDeletingLineItem] = useState(false);
 
   useEffect(() => {
     const loadInvoices = async () => {
@@ -348,6 +351,33 @@ export default function ProcessedInvoices() {
     } finally {
       setIsSavingLineItem(false);
       setEditingLineItem(null);
+    }
+  };
+
+  const handleDeleteLineItem = async (
+    lineItemId: string,
+    invoiceId: string,
+  ) => {
+    setIsDeletingLineItem(true);
+
+    try {
+      const result = await deleteLineItemAction({ id: lineItemId });
+
+      if (result.success) {
+        // Update the local state by removing the deleted line item
+        setLineItems((prev) => ({
+          ...prev,
+          [invoiceId]: prev[invoiceId].filter((item) => item.id !== lineItemId),
+        }));
+        toast.success('Line item deleted successfully');
+      } else {
+        toast.error(result.error || 'Failed to delete line item');
+      }
+    } catch (error) {
+      console.error('Error deleting line item:', error);
+      toast.error('Failed to delete line item');
+    } finally {
+      setIsDeletingLineItem(false);
     }
   };
 
@@ -722,6 +752,9 @@ export default function ProcessedInvoices() {
                                   <th className="py-2 px-4 text-right font-medium">
                                     Total
                                   </th>
+                                  <th className="py-2 px-4 text-right font-medium">
+                                    Actions
+                                  </th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -910,6 +943,22 @@ export default function ProcessedInvoices() {
                                           ${item.total.toFixed(2)}
                                         </div>
                                       )}
+                                    </td>
+                                    <td className="py-2 px-4 text-right">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() =>
+                                          handleDeleteLineItem(
+                                            item.id,
+                                            invoice.id,
+                                          )
+                                        }
+                                        disabled={isDeletingLineItem}
+                                        className="h-8 w-8 p-0 text-destructive hover:text-destructive/80"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
                                     </td>
                                   </tr>
                                 ))}

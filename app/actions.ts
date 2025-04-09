@@ -5,6 +5,7 @@ import {
   updateInvoice,
   getLineItemsByInvoiceId,
   updateLineItem,
+  deleteLineItem,
 } from '@/lib/db/queries';
 
 export async function fetchInvoices() {
@@ -86,5 +87,15 @@ export async function updateLineItemAction({
   } catch (error) {
     console.error('Error updating line item:', error);
     return { success: false, error: 'Failed to update line item' };
+  }
+}
+
+export async function deleteLineItemAction({ id }: { id: string }) {
+  try {
+    await deleteLineItem({ id });
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting line item:', error);
+    return { success: false, error: 'Failed to delete line item' };
   }
 }
