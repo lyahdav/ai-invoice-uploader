@@ -416,13 +416,14 @@ export default function ProcessedInvoices() {
     setInvoiceIdForNewLineItem(invoiceId);
   };
 
-  const handleNewLineItemChange = (
-    field: keyof NewLineItem,
-    value: string | number,
-  ) => {
+  const handleNewLineItemChange = (field: keyof NewLineItem, value: string) => {
+    const parsedValue =
+      field === 'quantity' || field === 'unitPrice'
+        ? Number.parseFloat(value)
+        : value;
     setNewLineItem((prev) => ({
       ...prev,
-      [field]: value,
+      [field]: Number.isNaN(parsedValue) ? '' : parsedValue,
     }));
   };
 
@@ -435,8 +436,8 @@ export default function ProcessedInvoices() {
       const result = await addLineItemAction({
         invoiceId: invoiceIdForNewLineItem,
         description: newLineItem.description,
-        quantity: newLineItem.quantity,
-        unitPrice: newLineItem.unitPrice,
+        quantity: newLineItem.quantity || 0,
+        unitPrice: newLineItem.unitPrice || 0,
       });
 
       if (result.success) {
@@ -468,6 +469,12 @@ export default function ProcessedInvoices() {
     } finally {
       setIsAddingLineItem(false);
     }
+  };
+
+  const calculateTotal = () => {
+    const quantity = newLineItem.quantity || 0;
+    const unitPrice = newLineItem.unitPrice || 0;
+    return (quantity * unitPrice).toFixed(2);
   };
 
   const cancelAddLineItem = () => {
@@ -1080,11 +1087,11 @@ export default function ProcessedInvoices() {
                                       <Input
                                         type="number"
                                         step="1"
-                                        value={newLineItem.quantity}
+                                        value={newLineItem.quantity.toString()}
                                         onChange={(e) =>
                                           handleNewLineItemChange(
                                             'quantity',
-                                            Number.parseFloat(e.target.value),
+                                            e.target.value,
                                           )
                                         }
                                         className="h-8 w-full text-right"
@@ -1094,11 +1101,11 @@ export default function ProcessedInvoices() {
                                       <Input
                                         type="number"
                                         step="0.01"
-                                        value={newLineItem.unitPrice}
+                                        value={newLineItem.unitPrice.toString()}
                                         onChange={(e) =>
                                           handleNewLineItemChange(
                                             'unitPrice',
-                                            Number.parseFloat(e.target.value),
+                                            e.target.value,
                                           )
                                         }
                                         className="h-8 w-full text-right"
@@ -1106,11 +1113,7 @@ export default function ProcessedInvoices() {
                                     </td>
                                     <td className="py-2 px-4 text-right">
                                       <span className="h-8 w-full text-right">
-                                        $
-                                        {(
-                                          newLineItem.quantity *
-                                          newLineItem.unitPrice
-                                        ).toFixed(2)}
+                                        ${calculateTotal()}
                                       </span>
                                     </td>
                                     <td className="py-2 px-4 text-right">
