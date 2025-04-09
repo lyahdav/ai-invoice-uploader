@@ -1087,7 +1087,7 @@ export default function ProcessedInvoices() {
                                             Number.parseFloat(e.target.value),
                                           )
                                         }
-                                        className="h-8 w-24 text-right"
+                                        className="h-8 w-full text-right"
                                       />
                                     </td>
                                     <td className="py-2 px-4 text-right">
@@ -1101,15 +1101,17 @@ export default function ProcessedInvoices() {
                                             Number.parseFloat(e.target.value),
                                           )
                                         }
-                                        className="h-8 w-24 text-right"
+                                        className="h-8 w-full text-right"
                                       />
                                     </td>
                                     <td className="py-2 px-4 text-right">
-                                      $
-                                      {(
-                                        newLineItem.quantity *
-                                        newLineItem.unitPrice
-                                      ).toFixed(2)}
+                                      <span className="h-8 w-full text-right">
+                                        $
+                                        {(
+                                          newLineItem.quantity *
+                                          newLineItem.unitPrice
+                                        ).toFixed(2)}
+                                      </span>
                                     </td>
                                     <td className="py-2 px-4 text-right">
                                       <div className="flex justify-end gap-1">
