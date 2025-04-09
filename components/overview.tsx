@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import Link from 'next/link';
 
 import { MessageIcon, VercelIcon } from './icons';
 
@@ -21,8 +20,8 @@ export const Overview = () => {
         </p>
         <p>
           This is a chatbot for processing invoices. Attach a PDF invoice below
-          and ask it to "Process this invoice" to extract key information from
-          the invoice and save it to the database.
+          and ask it to &quot;Process this invoice&quot; to extract key
+          information from the invoice and save it to the database.
         </p>
       </div>
     </motion.div>

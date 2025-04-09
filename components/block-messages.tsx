@@ -30,12 +30,10 @@ function PureBlockMessages({
   reload,
   isReadonly,
 }: BlockMessagesProps) {
-  const [messagesContainerRef, messagesEndRef] =
-    useScrollToBottom<HTMLDivElement>();
+  const messagesEndRef = useScrollToBottom<HTMLDivElement>(messages.length);
 
   return (
     <div
-      ref={messagesContainerRef}
       className="flex flex-col gap-4 h-full items-center overflow-y-scroll px-4 pt-20"
     >
       {messages.map((message, index) => (
