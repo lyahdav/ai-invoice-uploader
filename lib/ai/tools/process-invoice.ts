@@ -17,6 +17,26 @@ import { lineItem } from '@/lib/db/schema';
 const sqlite = new Database('sqlite.db');
 const db = drizzle(sqlite);
 
+// Schema for invoice validation
+const InvoiceValidationSchema = z.object({
+  isInvoice: z.boolean().describe('Whether the document is an invoice'),
+  documentType: z
+    .string()
+    .describe('The type of document (invoice, receipt, statement, etc.)'),
+  confidence: z
+    .number()
+    .describe('Confidence score of the classification (0-1)'),
+  explanation: z
+    .string()
+    .describe('Brief explanation of why this is or is not an invoice'),
+  vendorName: z
+    .string()
+    .optional()
+    .describe('The name of the vendor/supplier on the invoice'),
+  invoiceNumber: z.string().optional().describe('The invoice number'),
+  amount: z.number().optional().describe('The total amount of the invoice'),
+});
+
 const invoiceDataSchema = z.object({
   customerName: z.string().describe('The name of the customer on the invoice'),
   vendorName: z
@@ -71,11 +91,82 @@ async function saveLineItems(
   }
 }
 
+// Function to validate if a document is an invoice
+async function validateInvoice(
+  fileData: DataContent | URL,
+  fileMimeType: string,
+) {
+  const attachment: ImagePart | FilePart = fileMimeType.startsWith(
+    'application/pdf',
+  )
+    ? {
+        type: 'file',
+        data: fileData,
+        mimeType: fileMimeType,
+      }
+    : {
+        type: 'image',
+        image: fileData,
+        mimeType: fileMimeType,
+      };
+
+  // Validate if the document is an invoice using AI
+  const { object: validationResult } = await generateObject({
+    model: myProvider.languageModel('chat-model-large'),
+    schema: InvoiceValidationSchema,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: `Analyze this document and determine if it's an invoice. 
+            An invoice typically contains:
+            - A clear indication it's an invoice (title, header, etc.)
+            - Invoice number
+            - Date issued
+            - Due date
+            - Line items with descriptions and prices
+            - Total amount
+            - Vendor/supplier information
+            - Customer/billing information
+            
+            Receipts, account statements, and other financial documents are NOT invoices.
+            Provide a confidence score and explanation for your classification.
+            
+            If this is an invoice, also extract:
+            - Vendor name
+            - Invoice number
+            - Total amount`,
+          },
+          attachment,
+        ],
+      },
+    ],
+  });
+
+  return validationResult;
+}
+
+export type ProcessInvoiceResponse = {
+  success: boolean;
+  isInvoice?: boolean;
+  isDuplicate?: boolean;
+  message: string;
+  existingInvoice?: {
+    id: string;
+    vendorName: string;
+    invoiceNumber: string;
+    amount: number;
+    invoiceDate: Date;
+  };
+};
+
 export const processInvoice = ({ session }: { session: Session }) => {
   return tool({
     description: 'Process an invoice PDF or image and extract information',
     parameters: z.object({}),
-    execute: async (args, { messages }) => {
+    execute: async (args, { messages }): Promise<ProcessInvoiceResponse> => {
       try {
         // Get the last message which should contain the file data
         const lastMessage = messages[messages.length - 1];
@@ -107,6 +198,51 @@ export const processInvoice = ({ session }: { session: Session }) => {
           fileData = (lastContentItem as ImagePart).image;
           fileMimeType =
             (lastContentItem as ImagePart).mimeType || 'image/jpeg'; // Provide a default if undefined
+        }
+
+        // First validate if the document is an invoice
+        const validationResult = await validateInvoice(fileData, fileMimeType);
+
+        // If the document is not an invoice, reject it
+        if (!validationResult.isInvoice) {
+          return {
+            success: false,
+            isInvoice: false,
+            message: `This appears to be a ${validationResult.documentType}, not an invoice. ${validationResult.explanation}`,
+          };
+        }
+
+        // Check for duplicate invoice if we have the necessary information
+        if (
+          validationResult.vendorName &&
+          validationResult.invoiceNumber &&
+          validationResult.amount
+        ) {
+          const duplicateCheck = await checkForDuplicateInvoice({
+            vendorName: validationResult.vendorName,
+            invoiceNumber: validationResult.invoiceNumber,
+            amount: validationResult.amount,
+          });
+
+          if (duplicateCheck.isDuplicate && duplicateCheck.existingInvoice) {
+            const existingInvoice = duplicateCheck.existingInvoice;
+            const formattedDate = new Date(
+              existingInvoice.invoiceDate,
+            ).toLocaleDateString();
+
+            return {
+              success: false,
+              isDuplicate: true,
+              message: `Duplicate invoice detected: An invoice with the same vendor (${existingInvoice.vendorName}), invoice number (${existingInvoice.invoiceNumber}), and amount ($${existingInvoice.amount.toFixed(2)}) was already uploaded on ${formattedDate}.`,
+              existingInvoice: {
+                id: existingInvoice.id,
+                vendorName: existingInvoice.vendorName,
+                invoiceNumber: existingInvoice.invoiceNumber,
+                amount: existingInvoice.amount,
+                invoiceDate: existingInvoice.invoiceDate,
+              },
+            };
+          }
         }
 
         const attachment: ImagePart | FilePart = fileMimeType.startsWith(
@@ -149,27 +285,6 @@ export const processInvoice = ({ session }: { session: Session }) => {
           ],
         });
 
-        // Check for duplicate invoice before saving
-        const duplicateCheck = await checkForDuplicateInvoice({
-          vendorName: extractedData.vendorName,
-          invoiceNumber: extractedData.invoiceNumber,
-          amount: extractedData.amount,
-        });
-
-        if (duplicateCheck.isDuplicate && duplicateCheck.existingInvoice) {
-          const existingInvoice = duplicateCheck.existingInvoice;
-          const formattedDate = new Date(
-            existingInvoice.invoiceDate,
-          ).toLocaleDateString();
-
-          return {
-            success: false,
-            isDuplicate: true,
-            message: `This invoice appears to be a duplicate. An invoice with the same vendor (${existingInvoice.vendorName}), invoice number (${existingInvoice.invoiceNumber}), and amount ($${existingInvoice.amount.toFixed(2)}) was already uploaded on ${formattedDate}.`,
-            data: extractedData,
-          };
-        }
-
         // Generate a unique ID for the invoice
         const id = generateUUID();
 
@@ -193,15 +308,13 @@ export const processInvoice = ({ session }: { session: Session }) => {
           success: true,
           isDuplicate: false,
           message: 'Invoice processed and saved successfully',
-          data: extractedData,
         };
       } catch (error) {
         console.error('Error processing invoice:', error);
         return {
           success: false,
           isDuplicate: false,
-          message: 'Failed to process invoice',
-          error: error instanceof Error ? error.message : String(error),
+          message: `Failed to process invoice: ${error instanceof Error ? error.message : String(error)}`,
         };
       }
     },

@@ -21,8 +21,11 @@ import type {
   NewLineItem,
 } from './types';
 import React from 'react';
+import type { ProcessInvoiceResponse } from '@/lib/ai/tools/process-invoice';
 
-export default function ProcessedInvoices() {
+export default function ProcessedInvoices({
+  result,
+}: { result?: ProcessInvoiceResponse }) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +61,11 @@ export default function ProcessedInvoices() {
   >(null);
 
   useEffect(() => {
+    // If we have a result and it's not successful, set the error message
+    if (result && !result.success) {
+      setError(result.message);
+    }
+
     const loadInvoices = async () => {
       try {
         const result = await fetchInvoices();
@@ -75,7 +83,7 @@ export default function ProcessedInvoices() {
     };
 
     loadInvoices();
-  }, []);
+  }, [result]);
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {

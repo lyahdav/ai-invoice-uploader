@@ -163,7 +163,7 @@ const PurePreviewMessage = ({
                             isReadonly={isReadonly}
                           />
                         ) : toolName === 'processInvoice' ? (
-                          <ProcessedInvoices />
+                          <ProcessedInvoices result={result} />
                         ) : toolName === 'showInvoices' ? (
                           <ProcessedInvoices />
                         ) : (
