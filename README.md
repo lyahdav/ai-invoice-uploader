@@ -35,7 +35,7 @@ Your app should now be running on [localhost:3000](http://localhost:3000/).
 ## Features
 
 The chatbot supports the following commands:
-- `process this invoice` - Upload and process an invoice (PDF or image) to extract information and save it to the database
+- `process this invoice` - Upload and process an invoice (PDF or image) to extract information and save it to the database. If you upload an invoice that already exists it will prevent it from being saved to the database again.
 - `show invoices` or `view invoices` - Display all processed invoices from the database
 
 The invoice list supports the following features:

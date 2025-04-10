@@ -1,8 +1,14 @@
 import { z } from 'zod';
 import { generateUUID } from '@/lib/utils';
-import { saveInvoice } from '@/lib/db/queries';
+import { saveInvoice, checkForDuplicateInvoice } from '@/lib/db/queries';
 import type { Session } from 'next-auth';
-import { tool, generateObject, type FilePart, type ImagePart, type DataContent } from 'ai';
+import {
+  tool,
+  generateObject,
+  type FilePart,
+  type ImagePart,
+  type DataContent,
+} from 'ai';
 import { myProvider } from '../models';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import Database from 'better-sqlite3';
@@ -143,6 +149,27 @@ export const processInvoice = ({ session }: { session: Session }) => {
           ],
         });
 
+        // Check for duplicate invoice before saving
+        const duplicateCheck = await checkForDuplicateInvoice({
+          vendorName: extractedData.vendorName,
+          invoiceNumber: extractedData.invoiceNumber,
+          amount: extractedData.amount,
+        });
+
+        if (duplicateCheck.isDuplicate && duplicateCheck.existingInvoice) {
+          const existingInvoice = duplicateCheck.existingInvoice;
+          const formattedDate = new Date(
+            existingInvoice.invoiceDate,
+          ).toLocaleDateString();
+
+          return {
+            success: false,
+            isDuplicate: true,
+            message: `This invoice appears to be a duplicate. An invoice with the same vendor (${existingInvoice.vendorName}), invoice number (${existingInvoice.invoiceNumber}), and amount ($${existingInvoice.amount.toFixed(2)}) was already uploaded on ${formattedDate}.`,
+            data: extractedData,
+          };
+        }
+
         // Generate a unique ID for the invoice
         const id = generateUUID();
 
@@ -164,6 +191,7 @@ export const processInvoice = ({ session }: { session: Session }) => {
 
         return {
           success: true,
+          isDuplicate: false,
           message: 'Invoice processed and saved successfully',
           data: extractedData,
         };
@@ -171,6 +199,7 @@ export const processInvoice = ({ session }: { session: Session }) => {
         console.error('Error processing invoice:', error);
         return {
           success: false,
+          isDuplicate: false,
           message: 'Failed to process invoice',
           error: error instanceof Error ? error.message : String(error),
         };

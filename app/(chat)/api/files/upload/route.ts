@@ -4,6 +4,7 @@ import { auth } from '@/app/(auth)/auth';
 import { generateObject } from 'ai';
 import { myProvider } from '@/lib/ai/models';
 import type { FilePart, ImagePart } from 'ai';
+import { checkForDuplicateInvoice } from '@/lib/db/queries';
 
 // Use Blob instead of File since File is not available in Node.js environment
 const FileSchema = z.object({
@@ -39,6 +40,12 @@ const InvoiceValidationSchema = z.object({
   explanation: z
     .string()
     .describe('Brief explanation of why this is or is not an invoice'),
+  vendorName: z
+    .string()
+    .optional()
+    .describe('The name of the vendor/supplier on the invoice'),
+  invoiceNumber: z.string().optional().describe('The invoice number'),
+  amount: z.number().optional().describe('The total amount of the invoice'),
 });
 
 export async function POST(request: Request) {
@@ -98,7 +105,12 @@ export async function POST(request: Request) {
                 - Customer/billing information
                 
                 Receipts, account statements, and other financial documents are NOT invoices.
-                Provide a confidence score and explanation for your classification.`,
+                Provide a confidence score and explanation for your classification.
+                
+                If this is an invoice, also extract:
+                - Vendor name
+                - Invoice number
+                - Total amount`,
               },
               {
                 type: file.type.startsWith('application/pdf')
@@ -121,6 +133,41 @@ export async function POST(request: Request) {
           },
           { status: 400 },
         );
+      }
+
+      // Check for duplicate invoice if we have the necessary information
+      if (
+        validationResult.vendorName &&
+        validationResult.invoiceNumber &&
+        validationResult.amount
+      ) {
+        const duplicateCheck = await checkForDuplicateInvoice({
+          vendorName: validationResult.vendorName,
+          invoiceNumber: validationResult.invoiceNumber,
+          amount: validationResult.amount,
+        });
+
+        if (duplicateCheck.isDuplicate && duplicateCheck.existingInvoice) {
+          const existingInvoice = duplicateCheck.existingInvoice;
+          const formattedDate = new Date(
+            existingInvoice.invoiceDate,
+          ).toLocaleDateString();
+
+          return NextResponse.json(
+            {
+              error: `Duplicate invoice detected: An invoice with the same vendor (${existingInvoice.vendorName}), invoice number (${existingInvoice.invoiceNumber}), and amount ($${existingInvoice.amount.toFixed(2)}) was already uploaded on ${formattedDate}.`,
+              isDuplicate: true,
+              existingInvoice: {
+                id: existingInvoice.id,
+                vendorName: existingInvoice.vendorName,
+                invoiceNumber: existingInvoice.invoiceNumber,
+                amount: existingInvoice.amount,
+                invoiceDate: existingInvoice.invoiceDate,
+              },
+            },
+            { status: 409 }, // 409 Conflict
+          );
+        }
       }
 
       // Generate unique filename with timestamp

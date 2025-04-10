@@ -21,7 +21,7 @@ import {
 import { toast } from 'sonner';
 import { useLocalStorage, useWindowSize } from 'usehooks-ts';
 
-import { sanitizeUIMessages } from '@/lib/utils';
+import { sanitizeUIMessages, generateUUID } from '@/lib/utils';
 
 import { ArrowUpIcon, PaperclipIcon, StopIcon } from './icons';
 import { PreviewAttachment } from './preview-attachment';
@@ -163,8 +163,30 @@ function PureMultimodalInput({
           },
         };
       }
+
       const errorData = await response.json();
       console.error('Upload failed with error:', errorData);
+
+      // Handle duplicate invoice case
+      if (response.status === 409 && errorData.isDuplicate) {
+        // Add a message to the chat about the duplicate invoice
+        const duplicateMessage: Message = {
+          id: generateUUID(),
+          role: 'assistant',
+          content: errorData.error,
+          createdAt: new Date(),
+        };
+
+        setMessages((prevMessages) => [...prevMessages, duplicateMessage]);
+
+        // Show a toast notification
+        toast.error('Duplicate invoice detected', {
+          description: errorData.error,
+        });
+
+        return undefined;
+      }
+
       toast.error(errorData.error || 'Failed to upload file');
     } catch (error) {
       console.error('Upload failed with exception:', error);

@@ -525,3 +525,42 @@ export async function insertLineItem({
     throw error;
   }
 }
+
+export async function checkForDuplicateInvoice({
+  vendorName,
+  invoiceNumber,
+  amount,
+}: {
+  vendorName: string;
+  invoiceNumber: string;
+  amount: number;
+}) {
+  try {
+    // Check for existing invoices with the same vendor, invoice number, and amount
+    const existingInvoices = await db
+      .select()
+      .from(invoice)
+      .where(
+        and(
+          eq(invoice.vendorName, vendorName),
+          eq(invoice.invoiceNumber, invoiceNumber),
+          eq(invoice.amount, amount),
+        ),
+      );
+
+    if (existingInvoices.length > 0) {
+      return {
+        isDuplicate: true,
+        existingInvoice: existingInvoices[0],
+      };
+    }
+
+    return {
+      isDuplicate: false,
+      existingInvoice: null,
+    };
+  } catch (error) {
+    console.error('Failed to check for duplicate invoice in database', error);
+    throw error;
+  }
+}
