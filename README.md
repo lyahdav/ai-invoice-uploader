@@ -1,29 +1,44 @@
-## Features
+# Invoice Processing AI Chatbot
 
-- [Next.js](https://nextjs.org) App Router
-  - Advanced routing for seamless navigation and performance
-  - React Server Components (RSCs) and Server Actions for server-side rendering and increased performance
-- [AI SDK](https://sdk.vercel.ai/docs)
-  - Unified API for generating text, structured objects, and tool calls with LLMs
-  - Hooks for building dynamic chat and generative user interfaces
-  - Supports OpenAI (default), Anthropic, Cohere, and other model providers
-- [shadcn/ui](https://ui.shadcn.com)
-  - Styling with [Tailwind CSS](https://tailwindcss.com)
-  - Component primitives from [Radix UI](https://radix-ui.com) for accessibility and flexibility
-
-## Model Providers
-
-This template ships with OpenAI `gpt-4o` as the default. However, with the [AI SDK](https://sdk.vercel.ai/docs), you can switch LLM providers to [OpenAI](https://openai.com), [Anthropic](https://anthropic.com), [Cohere](https://cohere.com/), and [many more](https://sdk.vercel.ai/providers/ai-sdk-providers) with just a few lines of code.
-
+A modern AI-powered chatbot built with Next.js that can extract information from PDF/image invoices and save them to a database.
 
 ## Running locally
 
-You will need to use the environment variables [defined in `.env.example`](.env.example) to run Next.js AI Chatbot. 
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+3. Set up environment variables:
+   - Create a `.env.development.local` file in the root directory
+   - Add the following environment variables:
+     ```
+     OPENAI_API_KEY=your_openai_api_key
+     ANTHROPIC_API_KEY=your_anthropic_api_key
+     ```
+   - You can get your API keys from:
+     - OpenAI API Key: https://platform.openai.com/account/api-keys
+     - Anthropic API Key: https://console.anthropic.com/
 
-```bash
-pnpm install
-pnpm db:migrate
-pnpm dev
-```
+4. Run database migrations:
+   ```bash
+   pnpm db:migrate
+   ```
 
-Your app template should now be running on [localhost:3000](http://localhost:3000/).
+5. Start the development server:
+   ```bash
+   pnpm dev
+   ```
+
+Your app should now be running on [localhost:3000](http://localhost:3000/).
+
+## Features
+
+The chatbot supports the following commands:
+- `process this invoice` - Upload and process an invoice (PDF or image) to extract information and save it to the database
+- `show invoices` or `view invoices` - Display all processed invoices from the database
+
+The invoice list supports the following features:
+- Manual editing
+- Sorting
+- Viewing and editing of line items by clicking the plus at the start of each row
