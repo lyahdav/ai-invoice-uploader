@@ -5,7 +5,8 @@ import type { SortColumn, SortDirection } from './types';
 import { InvoiceRow } from './invoice-row';
 import { LineItemsTable } from './line-items-table';
 import { InvoiceTableSkeleton } from './invoice-table-skeleton';
-import React from 'react';
+import { useScrollToBottom } from '@/components/use-scroll-to-bottom';
+import React, { useEffect } from 'react';
 
 interface InvoiceTableProps {
   invoices: Invoice[];
@@ -96,6 +97,14 @@ export function InvoiceTable({
   onAddLineItem,
   calculateTotal,
 }: InvoiceTableProps) {
+  const tableEndRef = useScrollToBottom<HTMLDivElement>(invoices.length);
+
+  useEffect(() => {
+    if (!loading && invoices.length > 0) {
+      tableEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [loading, invoices.length, tableEndRef]);
+
   if (loading) {
     return <InvoiceTableSkeleton />;
   }
@@ -258,6 +267,10 @@ export function InvoiceTable({
               ))}
             </tbody>
           </table>
+          <div
+            ref={tableEndRef}
+            className="shrink-0 min-w-[24px] min-h-[24px]"
+          />
         </div>
       </CardContent>
     </Card>
